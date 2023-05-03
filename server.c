@@ -31,7 +31,8 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
     num_clients++;
 
     struct packet received_packet;
-    struct UDP_message parsed_msg;
+    struct UDP_message UDP_parsed_msg;
+    struct TCP_message TCP_parsed_msg;
 
     // Add UDP file descriptor to poll.
     poll_fds[1].fd = UDP_clientfd;
@@ -83,22 +84,29 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                     // Parse UDP message.
-                    UDP_parse_message(received_packet, &parsed_msg);
+                    UDP_parse_message(received_packet, &UDP_parsed_msg);
 
                     //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                     UDP_print_subscription_message(inet_ntoa(UDP_cli_addr.sin_addr),
                                                 ntohs(UDP_cli_addr.sin_port),
-                                                parsed_msg.topic,
-                                                parsed_msg.data_type,
-                                                parsed_msg.content);
+                                                UDP_parsed_msg.topic,
+                                                UDP_parsed_msg.data_type,
+                                                UDP_parsed_msg.content);
                     //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+                    // TODO: send message to all subscribed TCP clients.
                 } else if (poll_fds[i].fd == TCP_clientfd) {
+                    // New TCP connection.
                     struct sockaddr_in cli_addr;
                     socklen_t cli_len = sizeof(cli_addr);
                     int newsockfd = accept(TCP_clientfd,
                                            (struct sockaddr *)&cli_addr,
                                            &cli_len);
                     DIE(newsockfd < 0, "accept failed");
+
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                    printf("Received TCP connection...\n");
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                     // Add new socket to read file descriptors in poll.
                     poll_fds[num_clients].fd = newsockfd;
@@ -110,40 +118,56 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                                                    inet_ntoa(cli_addr.sin_addr),
                                                    ntohs(cli_addr.sin_port));
                 } else {
-                    // // Receive message on one of the client sockets.
-                    // int rc = recv_all(poll_fds[i].fd,
-                    //                   &received_packet,
-                    //                   sizeof(received_packet));
-                    // DIE(rc < 0, "recv_all failed");
-                    // UDP_parse_message(received_packet, &parsed_msg);
+                    // Receive message on one of the client sockets.
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                    printf("Received TCP message...\n");
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
-                    // if (rc == 0) {
-                    //     // Client disconnected.
-                    //     server_print_connection_status(0, poll_fds[i].fd, 0, 0);
-                    //     // printf("Socket-ul client %d a inchis conexiunea\n", i);
-                    //     close(poll_fds[i].fd);
+                    // TODO: check why this is not working for 2 clients
+                    // blocks here after the second client connects
+                    // problem at `recv_all`
 
-                    //     // Remove closed socket from poll.
-                    //     for (int j = i; j < num_clients - 1; j++)
-                    //     {
-                    //         poll_fds[j] = poll_fds[j + 1];
-                    //     }
+                    int rc = recv_all(poll_fds[i].fd,
+                                      &received_packet,
+                                      sizeof(received_packet));
+                    DIE(rc < 0, "recv_all failed");
 
-                    //     num_clients--;
-                    // } else {
-                    //     // UDP_print_subscription_message();
-                    //     printf("S-a primit de la clientul de pe socketul %d mesajul: %s\n",
-                    //                  poll_fds[i].fd, received_packet.message);
+                    if (rc == 0) {
+                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                        printf("TCP connection closed...\n");
+                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
-                    //     // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
-                    //     // for (int j = 0; j < num_clients; j++)
-                    //     // {
-                    //     //     if (j != i && poll_fds[j].fd != UDP_clientfd)
-                    //     //     {
-                    //     //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
-                    //     //     }
-                    //     // }
-                    // }
+                        // Client disconnected.
+                        server_print_connection_status(0, poll_fds[i].fd, 0, 0);
+                        close(poll_fds[i].fd);
+
+                        // Remove closed socket from poll.
+                        for (int j = i; j < num_clients - 1; j++)
+                        {
+                            poll_fds[j] = poll_fds[j + 1];
+                        }
+                        num_clients--;
+                    } else {
+                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                        printf("Treat TCP message...\n");
+                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+                        TCP_parse_message(received_packet, &TCP_parsed_msg);
+                        // TODO: treat subscription messages from TCP clients.
+
+                        // UDP_print_subscription_message();
+                        printf("S-a primit de la clientul de pe socketul %d mesajul: %s\n",
+                                     poll_fds[i].fd, received_packet.message);
+
+                        // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
+                        // for (int j = 0; j < num_clients; j++)
+                        // {
+                        //     if (j != i && poll_fds[j].fd != UDP_clientfd)
+                        //     {
+                        //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
+                        //     }
+                        // }
+                    }
                 }
             }
         }

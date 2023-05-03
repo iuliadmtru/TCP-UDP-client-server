@@ -48,69 +48,47 @@ void run_client(int sockfd)
                 // server_exit(poll_fds, num_clients);
             } else if (strcmp(tcp_cmd, "subscribe") == 0) {
                 // Send subscribe message to server.
-                char buf[TOPIC_SIZE + 4];
-
                 char topic[TOPIC_SIZE];
-                int sf;
+                uint8_t sf;
                 scanf("%s", topic);
-                scanf("%d", &sf);
+                scanf("%hhu", &sf);
 
-                snprintf(sent_packet.message, sizeof(buf), "%d %s %d", 1, topic, sf);
-                printf("Sending subscribe message: %s...\n", sent_packet.message);
-
-                // memcpy(sent_packet.message, buf, sizeof(buf));
-
+                snprintf(sent_packet.message, TOPIC_SIZE + 4, "%hhu %s %hhu", 1, topic, sf);
                 send_all(sockfd, &sent_packet, sizeof(sent_packet));
+                TCP_client_print_subscription_status(1);
+
+                printf("Sent subscribe message: %s...\n", sent_packet.message);
             } else if (strcmp(tcp_cmd, "unsubscribe") == 0) {
                 // Send unsubscribe message to server.
-                char buf[TOPIC_SIZE + 2];
-                strcpy(buf, "0 ");
-
                 char topic[TOPIC_SIZE];
                 scanf("%s", topic);
-                strcat(buf, topic);
-                memcpy(sent_packet.message, buf, sizeof(buf));
 
-                printf("Sending unsubscribe message: %s...\n", sent_packet.message);
-
+                snprintf(sent_packet.message, TOPIC_SIZE + 4, "%hhu %s %hhu", 0, topic, 0);
                 send_all(sockfd, &sent_packet, sizeof(sent_packet));
+                TCP_client_print_subscription_status(0);
+
+                printf("Sent unsubscribe message: %s...\n", sent_packet.message);
             } else {
                 printf("Unknown command\n");
             }
         } else if ((poll_fds[1].revents & POLLIN) != 0) {
-            // se trateaza noua conexiune...
+            // New connection.
+            // TODO: ?
             int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
+            DIE(rc < 0, "recv_all failed");
             printf("Received new connection: %s...\n", recv_packet.message);
         } else {
             // se trateaza mesajele de la un client...
+            // TODO: Receive messages from UDP subscriptions.
         }
     }
-
-    // while (fgets(buf, sizeof(buf), stdin) && !isspace(buf[0]))
-    // {
-    //     sent_packet.len = strlen(buf) + 1;
-    //     strcpy(sent_packet.message, buf);
-
-    //     // Use send_all function to send the pachet to the server.
-    //     send_all(sockfd, &sent_packet, sizeof(sent_packet));
-
-    //     // Receive a message and show it's content
-    //     int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
-    //     if (rc <= 0)
-    //     {
-    //         break;
-    //     }
-
-    //     printf("%s\n", recv_packet.message);
-    // }
 }
 
 int main(int argc, char *argv[])
 {
     int sockfd = -1;
 
-    if (argc != 4)
-    {
+    if (argc != 4) {
         printf("\n Usage: %s <ID_CLIENT> <IP_SERVER> <PORT_SERVER>\n", argv[0]);
         return 1;
     }

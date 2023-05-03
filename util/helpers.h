@@ -39,4 +39,6 @@ void UDP_print_subscription_message(char *ip,
                                     uint8_t data_type,
                                     char *content);
 
+void TCP_parse_message(struct packet packet, void *destination);
+
 #endif

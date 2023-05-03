@@ -6,7 +6,6 @@
 
 int recv_all(int sockfd, void *buffer, size_t len)
 {
-
     size_t bytes_received = 0;
     size_t bytes_remaining = len;
     char *buff = buffer;
@@ -14,6 +13,8 @@ int recv_all(int sockfd, void *buffer, size_t len)
     while (bytes_remaining) {
         ssize_t rc = recv(sockfd, buff + bytes_received, bytes_remaining, 0);
         DIE(rc == -1, "recv failed\n");
+        if (rc == 0)
+            return 0;
 
         bytes_received += rc;
         bytes_remaining -= rc;

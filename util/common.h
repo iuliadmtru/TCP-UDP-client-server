@@ -27,4 +27,10 @@ struct UDP_message {
     char content[CONTENT_MAXSIZE];
 };
 
+struct TCP_message {
+    uint8_t subscribe_status;
+    char topic[TOPIC_SIZE];
+    uint8_t sf;
+};
+
 #endif
