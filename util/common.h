@@ -15,8 +15,9 @@ int recv_all(int sockfd, void *buff, size_t len);
 #define TOPIC_SIZE 50
 #define CONTENT_MAXSIZE 1500
 
-struct UDP_packet {
-    // uint16_t len;
+#define MAX_CONNECTIONS 32
+
+struct packet {
     char message[MSG_MAXSIZE + 1];
 };
 

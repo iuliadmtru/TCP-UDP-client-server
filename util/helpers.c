@@ -33,7 +33,7 @@ void TCP_client_print_subscription_status(int subscribed)
     printf("%s\n", msg);
 }
 
-void UDP_parse_message(struct UDP_packet packet, void *destination)
+void UDP_parse_message(struct packet packet, void *destination)
 {
     // printf("\nEntered `UDP_parse_message`...\n");
 
