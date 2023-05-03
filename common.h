@@ -10,6 +10,7 @@ int recv_all(int sockfd, void *buff, size_t len);
 /*
  * Maximum sizes.
  */
+#define CMD_MAXSIZE 20
 #define MSG_MAXSIZE 1551
 #define TOPIC_SIZE 50
 #define CONTENT_MAXSIZE 1500

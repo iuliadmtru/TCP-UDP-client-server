@@ -20,83 +20,11 @@
 
 #include "common.h"
 #include "helpers.h"
+#include "server_utils/util.h"
 
 #define MAX_CONNECTIONS 32
 
-// // Primeste date de pe connfd1 si trimite mesajul receptionat pe connfd2
-// int receive_and_send(int connfd1, int connfd2, size_t len)
-// {
-//     int bytes_received;
-//     char buffer[len];
-
-//     // Primim exact len octeti de la connfd1
-//     bytes_received = recv_all(connfd1, buffer, len);
-//     // S-a inchis conexiunea
-//     if (bytes_received == 0)
-//     {
-//         return 0;
-//     }
-//     DIE(bytes_received < 0, "recv");
-
-//     // Trimitem mesajul catre connfd2
-//     int rc = send_all(connfd2, buffer, len);
-//     if (rc <= 0)
-//     {
-//         perror("send_all");
-//         return -1;
-//     }
-
-//     return bytes_received;
-// }
-
-// void run_chat_server(int listenfd)
-// {
-//     struct sockaddr_in client_addr1;
-//     struct sockaddr_in client_addr2;
-//     socklen_t clen1 = sizeof(client_addr1);
-//     socklen_t clen2 = sizeof(client_addr2);
-
-//     int connfd1 = -1;
-//     int connfd2 = -1;
-//     int rc;
-
-//     // Setam socket-ul listenfd pentru ascultare
-//     rc = listen(listenfd, 2);
-//     DIE(rc < 0, "listen");
-
-//     // Acceptam doua conexiuni
-//     printf("Astept conectarea primului client...\n");
-//     connfd1 = accept(listenfd, (struct sockaddr *)&client_addr1, &clen1);
-//     DIE(connfd1 < 0, "accept");
-
-//     printf("Astept connectarea clientului 2...\n");
-
-//     connfd2 = accept(listenfd, (struct sockaddr *)&client_addr2, &clen2);
-//     DIE(connfd2 < 0, "accept");
-
-//     while (1)
-//     {
-//         // Primim de la primul client, trimitem catre al 2lea
-//         printf("Primesc de la 1 si trimit catre 2...\n");
-//         int rc = receive_and_send(connfd1, connfd2, sizeof(struct chat_packet));
-//         if (rc <= 0)
-//         {
-//             break;
-//         }
-
-//         rc = receive_and_send(connfd2, connfd1, sizeof(struct chat_packet));
-//         if (rc <= 0)
-//         {
-//             break;
-//         }
-//     }
-
-//     // Inchidem conexiunile si socketii creati
-//     close(connfd1);
-//     close(connfd2);
-// }
-
-void run_server(int UDP_listenfd, int TCP_listenfd)
+void run_server(int UDP_clientfd, int TCP_clientfd)
 {
     //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
     printf("Entered `run_server`...\n");
@@ -104,19 +32,23 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
 
 
     struct pollfd poll_fds[MAX_CONNECTIONS];
-    int num_clients = 1;
+    int num_clients = 2;
     int rc;
+
+    // Add stdin to poll.
+    poll_fds[0].fd = 0;
+    poll_fds[0].events = POLLIN;
 
     struct UDP_packet received_packet;
     struct UDP_message parsed_msg;
 
     // // Set listenfd pentru ascultare
-    // rc = listen(UDP_listenfd, MAX_CONNECTIONS);
+    // rc = listen(UDP_clientfd, MAX_CONNECTIONS);
     // DIE(rc < 0, "listen failed");
 
     // Add UDP file descriptor to poll.
-    poll_fds[0].fd = UDP_listenfd;
-    poll_fds[0].events = POLLIN;
+    poll_fds[1].fd = UDP_clientfd;
+    poll_fds[1].events = POLLIN;
 
     while (1) {
         //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
@@ -126,44 +58,54 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
         rc = poll(poll_fds, num_clients, -1);
         DIE(rc < 0, "poll failed");
 
-        // Receive UDP packet.
-        struct sockaddr_in UDP_cli_addr;
-        socklen_t UDP_cli_len = sizeof(UDP_cli_addr);
-        int rc = recvfrom(UDP_listenfd,
-                          &received_packet,
-                          sizeof(struct UDP_packet),
-                          0,
-                          (struct sockaddr *)&UDP_cli_addr,
-                          &UDP_cli_len);
-        DIE(rc < 0, "recvfrom failed");
-
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-        printf("Received UDP packet...\n");
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-
-        // Parse UDP message.
-        UDP_parse_message(received_packet, &parsed_msg);
-
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-        UDP_print_subscription_message(inet_ntoa(UDP_cli_addr.sin_addr),
-                                       ntohs(UDP_cli_addr.sin_port),
-                                       parsed_msg.topic,
-                                       parsed_msg.data_type,
-                                       parsed_msg.content);
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-
-        // for (int i = 0; i < num_clients; i++) {
-        for (int i = 0; i < 0; i++) {
+        for (int i = 0; i < num_clients; i++) {
             if (poll_fds[i].revents & POLLIN) {
-                if (poll_fds[i].fd == UDP_listenfd) {
-                    // New UDP connection.
-                    struct sockaddr_in cli_addr;
-                    socklen_t cli_len = sizeof(cli_addr);
-                    int rc = recvfrom(UDP_listenfd, &received_packet, sizeof(struct UDP_packet), 0,
-                                        (struct sockaddr *)&cli_addr, &cli_len);
+                if (poll_fds[i].fd == 0) {
+                    // Receive stdin command.
+                    printf("Received stdin command...\n");
+                    char server_cmd[CMD_MAXSIZE];
+                    scanf("%s", server_cmd);
+                    if (strcmp(server_cmd, "exit") == 0)
+                        server_exit(poll_fds, num_clients);
+                    else
+                        printf("Unknown command\n");
+                } else if (poll_fds[i].fd == UDP_clientfd) {
+                    // Receive UDP packet.
+                    struct sockaddr_in UDP_cli_addr;
+                    socklen_t UDP_cli_len = sizeof(UDP_cli_addr);
+                    int rc = recvfrom(UDP_clientfd,
+                                    &received_packet,
+                                    sizeof(struct UDP_packet),
+                                    0,
+                                    (struct sockaddr *)&UDP_cli_addr,
+                                    &UDP_cli_len);
                     DIE(rc < 0, "recvfrom failed");
+
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                    printf("Received UDP packet...\n");
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+                    // Parse UDP message.
+                    UDP_parse_message(received_packet, &parsed_msg);
+
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+                    UDP_print_subscription_message(inet_ntoa(UDP_cli_addr.sin_addr),
+                                                ntohs(UDP_cli_addr.sin_port),
+                                                parsed_msg.topic,
+                                                parsed_msg.data_type,
+                                                parsed_msg.content);
+                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+
+
+
+                    // struct sockaddr_in cli_addr;
+                    // socklen_t cli_len = sizeof(cli_addr);
+                    // int rc = recvfrom(UDP_clientfd, &received_packet, sizeof(struct UDP_packet), 0,
+                    //                     (struct sockaddr *)&cli_addr, &cli_len);
+                    // DIE(rc < 0, "recvfrom failed");
                     // int newsockfd =
-                    //         accept(UDP_listenfd, (struct sockaddr *)&cli_addr, &cli_len);
+                    //         accept(UDP_clientfd, (struct sockaddr *)&cli_addr, &cli_len);
                     // DIE(newsockfd < 0, "accept failed");
 
                     // // Add new socket to read file descriptors in poll.
@@ -178,7 +120,7 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
                     // // printf("Noua conexiune de la %s, port %d, socket client %d\n",
                     // //              inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port),
                     // //              newsockfd);
-                } else if (poll_fds[i].fd == TCP_listenfd) {
+                } else if (poll_fds[i].fd == TCP_clientfd) {
                     // for (int j = 0; j < num_clients; j++)
                     // {
                     //     if (j != i && poll_fds[j].fd != listenfd)
@@ -215,7 +157,7 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
                         // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
                         // for (int j = 0; j < num_clients; j++)
                         // {
-                        //     if (j != i && poll_fds[j].fd != UDP_listenfd)
+                        //     if (j != i && poll_fds[j].fd != UDP_clientfd)
                         //     {
                         //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
                         //     }
@@ -241,8 +183,8 @@ int main(int argc, char *argv[])
     DIE(rc != 1, "Invalid port");
 
     // Open UDP socket.
-    int UDP_listenfd = socket(AF_INET, SOCK_DGRAM, 0);
-    DIE(UDP_listenfd < 0, "socket failed");
+    int UDP_clientfd = socket(AF_INET, SOCK_DGRAM, 0);
+    DIE(UDP_clientfd < 0, "socket failed");
 
     // Set up the sockaddr_in struct.
     struct sockaddr_in serv_addr;
@@ -250,7 +192,7 @@ int main(int argc, char *argv[])
 
     // Make the socket address reusable.
     int enable = 1;
-    if (setsockopt(UDP_listenfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    if (setsockopt(UDP_clientfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         perror("setsockopt(SO_REUSEADDR) failed");
 
     // Fill in the structure.
@@ -260,14 +202,14 @@ int main(int argc, char *argv[])
     rc = inet_pton(AF_INET, argv[1], &serv_addr.sin_addr.s_addr);
     DIE(rc <= 0, "inet_pton failed");
 
-    // Bind socket.
-    rc = bind(UDP_listenfd, (const struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    // Bind UDP socket.
+    rc = bind(UDP_clientfd, (const struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "bind failed");
 
-    run_server(UDP_listenfd, 0);
+    run_server(UDP_clientfd, 0);
 
     // Close all connections.
-    close(UDP_listenfd);
+    close(UDP_clientfd);
 
     return 0;
 }

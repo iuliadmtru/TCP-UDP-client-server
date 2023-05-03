@@ -69,21 +69,21 @@ void UDP_print_subscription_message(char *ip,
     switch (data_type) {
         case 0:
             sign = *(uint8_t *)content;
-            uint32_t data_type_int = ntohl(*(uint32_t *)(content + 1));
-            sign ? printf("INT - -%d\n", data_type_int) :
-                   printf("INT - %d\n", data_type_int);
+            uint32_t data_int = ntohl(*(uint32_t *)(content + 1));
+            sign ? printf("INT - -%d\n", data_int) :
+                   printf("INT - %d\n", data_int);
             break;
         case 1:
-            uint16_t data_type_short_real = ntohs(*(uint16_t *)content);
-            printf("SHORT_REAL - %.2f\n", (float)data_type_short_real / 100);
+            uint16_t data_short_real = ntohs(*(uint16_t *)content);
+            printf("SHORT_REAL - %.2f\n", (float)data_short_real / 100);
             break;
         case 2:
             sign = *(uint8_t *)content;
             uint32_t significand = ntohl(*(uint32_t *)(content + 1));
             uint8_t exponent = *(uint8_t *)(content + 5);
-            float data_type_float = significand / pow(10, exponent);
-            sign ? printf("FLOAT - -%.*f\n", exponent, data_type_float) :
-                   printf("FLOAT - %.*f\n", exponent, data_type_float);
+            float data_float = significand / pow(10, exponent);
+            sign ? printf("FLOAT - -%.*f\n", exponent, data_float) :
+                   printf("FLOAT - %.*f\n", exponent, data_float);
             break;
         case 3:
             printf("STRING - %s\n", content);
