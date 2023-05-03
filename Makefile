@@ -5,8 +5,8 @@ PORT = 12345
 IP_SERVER = 127.0.0.1
 ID_CLIENT = 1
 
-server: server.c common.c helpers.c server_utils/util.c
-	gcc $(CFLAGS) server.c common.c helpers.c server_utils/util.c -o server $(LIBS)
+server: server.c util/common.c util/helpers.c server_utils/util.c
+	gcc $(CFLAGS) server.c util/common.c util/helpers.c server_utils/util.c -o server $(LIBS)
 
 subscriber:
 
@@ -21,4 +21,4 @@ run_udp_client:
 
 .PHONY: clean
 clean:
-	rm -rf server
+	rm server

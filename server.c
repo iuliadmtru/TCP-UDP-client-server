@@ -1,10 +1,3 @@
-/*
- * Protocoale de comunicatii
- * Laborator 7 - TCP
- * Echo Server
- * server.c
- */
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -18,8 +11,8 @@
 #include <sys/time.h>
 #include <sys/timerfd.h>
 
-#include "common.h"
-#include "helpers.h"
+#include "util/common.h"
+#include "util/helpers.h"
 #include "server_utils/util.h"
 
 #define MAX_CONNECTIONS 32
@@ -173,7 +166,7 @@ int main(int argc, char *argv[])
 {
     if (argc != 3)
     {
-        printf("\n Usage: %s <ip_address> <port>\n", argv[0]);
+        printf("\n Usage: %s <IP_ADDRESS> <PORT>\n", argv[0]);
         return 1;
     }
 
