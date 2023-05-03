@@ -22,15 +22,17 @@
  */
 void server_print_connection_status(int connected,
                                     int id,
-                                    uint32_t ip,
-                                    int port);
+                                    char *ip,
+                                    uint16_t port);
 
 void TCP_client_print_subscription_status(int subscribed);
 
-void TCP_client_print_subscription_message(uint32_t ip,
-                                           int port,
-                                           char *topic,
-                                           char *data_type,
-                                           char *message);
+void UDP_parse_message(struct UDP_packet, void *destination);
+
+void UDP_print_subscription_message(char *ip,
+                                    uint16_t port,
+                                    char *topic,
+                                    uint8_t data_type,
+                                    char *content);
 
 #endif
