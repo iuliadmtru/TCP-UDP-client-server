@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <math.h>
 
 #include "helpers.h"
 #include "common.h"
@@ -18,9 +20,7 @@ void server_print_connection_status(int connected,
 {
     if (connected) {
         printf("New client %d connected from ", id);
-        // print_ip_address(ip);
-        printf("%s", ip);
-        printf(":%hu.\n", port);
+        printf("%s:%hu.\n", ip, port);
     } else {
         printf("Client %d disconnected.\n", id);
     }
@@ -35,15 +35,25 @@ void TCP_client_print_subscription_status(int subscribed)
 
 void UDP_parse_message(struct UDP_packet packet, void *destination)
 {
+    // printf("\nEntered `UDP_parse_message`...\n");
+
+
     struct UDP_message *parsed_msg = (struct UDP_message *)destination;
     // Parse and terminate topic.
-    memcpy(&parsed_msg->topic, &packet.message, TOPIC_SIZE);
+    memcpy(parsed_msg->topic, packet.message, TOPIC_SIZE);
     parsed_msg->topic[TOPIC_SIZE] = '\0';
     // Parse data type.
-    memcpy(&parsed_msg->data_type, &packet.message + TOPIC_SIZE, 1);
+    memcpy(&parsed_msg->data_type, packet.message + TOPIC_SIZE, sizeof(parsed_msg->data_type));
     // Parse and terminate content.
-    memcpy(&parsed_msg->content, &packet.message + TOPIC_SIZE + 1, CONTENT_MAXSIZE);
+    memcpy(parsed_msg->content, packet.message + TOPIC_SIZE + 1, CONTENT_MAXSIZE);
     parsed_msg->content[CONTENT_MAXSIZE] = '\0';
+
+    // printf("Parsed topic: %s\n", parsed_msg->topic);
+    // printf("Parsed data type: %d\n", parsed_msg->data_type);
+    // printf("Parsed content: %s\n", parsed_msg->content);
+
+
+    // printf("Exiting `UDP_parse_message`...\n\n");
 }
 
 void UDP_print_subscription_message(char *ip,
@@ -52,26 +62,36 @@ void UDP_print_subscription_message(char *ip,
                                     uint8_t data_type,
                                     char *content)
 {
-    char *data_type_str;
+    printf("---------------- UDP message ----------------\n");
+    printf("%s:%hu - %s - ", ip, port, topic);
+
+    uint8_t sign;
     switch (data_type) {
         case 0:
-            data_type_str = "INT";
+            sign = *(uint8_t *)content;
+            uint32_t data_type_int = ntohl(*(uint32_t *)(content + 1));
+            sign ? printf("INT - -%d\n", data_type_int) :
+                   printf("INT - %d\n", data_type_int);
             break;
         case 1:
-            data_type_str = "SHORT_REAL";
+            uint16_t data_type_short_real = ntohs(*(uint16_t *)content);
+            printf("SHORT_REAL - %.2f\n", (float)data_type_short_real / 100);
             break;
         case 2:
-            data_type_str = "FLOAT";
+            sign = *(uint8_t *)content;
+            uint32_t significand = ntohl(*(uint32_t *)(content + 1));
+            uint8_t exponent = *(uint8_t *)(content + 5);
+            float data_type_float = significand / pow(10, exponent);
+            sign ? printf("FLOAT - -%.*f\n", exponent, data_type_float) :
+                   printf("FLOAT - %.*f\n", exponent, data_type_float);
             break;
         case 3:
-            data_type_str = "STRING";
+            printf("STRING - %s\n", content);
             break;
         default:
-            data_type_str = "UNKNOWN";
+            printf("UNKNOWN - %s\n", content);
             break;
     }
 
-    // print_ip_address(ip);
-    printf("%s", ip);
-    printf(":%hu - %s - %s - %s\n", port, topic, data_type_str, content);
+    printf("---------------------------------------------\n");
 }

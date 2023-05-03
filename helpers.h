@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "common.h"
+
 /*
  * Error-checking macro.
  */
@@ -17,6 +19,8 @@
         }                                                                      \
     } while (0)
 
+;
+
 /*
  * Messages.
  */
@@ -27,7 +31,7 @@ void server_print_connection_status(int connected,
 
 void TCP_client_print_subscription_status(int subscribed);
 
-void UDP_parse_message(struct UDP_packet, void *destination);
+void UDP_parse_message(struct UDP_packet packet, void *destination);
 
 void UDP_print_subscription_message(char *ip,
                                     uint16_t port,

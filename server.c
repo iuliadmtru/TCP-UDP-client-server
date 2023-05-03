@@ -98,6 +98,10 @@
 
 void run_server(int UDP_listenfd, int TCP_listenfd)
 {
+    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+    printf("Entered `run_server`...\n");
+    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
 
     struct pollfd poll_fds[MAX_CONNECTIONS];
     int num_clients = 1;
@@ -105,51 +109,75 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
 
     struct UDP_packet received_packet;
     struct UDP_message parsed_msg;
-    UDP_parse_message(received_packet, &parsed_msg);
-    // struct UDP_packet timed_packet;
-    // char str[] = "Dragi clienti, pentru doar 12 lei o sa puteti trimite de 10 ori mai multe mesaje in jumatate din timp\n";
-    // strcpy(timed_packet.message, str);
-    // timed_packet.len = strlen(str);
 
-    // Set listenfd pentru ascultare
-    rc = listen(UDP_listenfd, MAX_CONNECTIONS);
-    DIE(rc < 0, "listen failed");
+    // // Set listenfd pentru ascultare
+    // rc = listen(UDP_listenfd, MAX_CONNECTIONS);
+    // DIE(rc < 0, "listen failed");
 
-    // se adauga noul file descriptor (socketul pe care se asculta conexiuni) in
-    // multimea read_fds
+    // Add UDP file descriptor to poll.
     poll_fds[0].fd = UDP_listenfd;
     poll_fds[0].events = POLLIN;
 
-    // // adaugă timerfd
-    // poll_fds[1].fd = timerfd;
-    // poll_fds[0].events = POLLIN;
-
     while (1) {
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+        printf("\nEntered server loop...\n");
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
         rc = poll(poll_fds, num_clients, -1);
         DIE(rc < 0, "poll failed");
 
-        for (int i = 0; i < num_clients; i++) {
+        // Receive UDP packet.
+        struct sockaddr_in UDP_cli_addr;
+        socklen_t UDP_cli_len = sizeof(UDP_cli_addr);
+        int rc = recvfrom(UDP_listenfd,
+                          &received_packet,
+                          sizeof(struct UDP_packet),
+                          0,
+                          (struct sockaddr *)&UDP_cli_addr,
+                          &UDP_cli_len);
+        DIE(rc < 0, "recvfrom failed");
+
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+        printf("Received UDP packet...\n");
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+        // Parse UDP message.
+        UDP_parse_message(received_packet, &parsed_msg);
+
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+        UDP_print_subscription_message(inet_ntoa(UDP_cli_addr.sin_addr),
+                                       ntohs(UDP_cli_addr.sin_port),
+                                       parsed_msg.topic,
+                                       parsed_msg.data_type,
+                                       parsed_msg.content);
+        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
+
+        // for (int i = 0; i < num_clients; i++) {
+        for (int i = 0; i < 0; i++) {
             if (poll_fds[i].revents & POLLIN) {
                 if (poll_fds[i].fd == UDP_listenfd) {
                     // New UDP connection.
                     struct sockaddr_in cli_addr;
                     socklen_t cli_len = sizeof(cli_addr);
-                    int newsockfd =
-                            accept(UDP_listenfd, (struct sockaddr *)&cli_addr, &cli_len);
-                    DIE(newsockfd < 0, "accept failed");
+                    int rc = recvfrom(UDP_listenfd, &received_packet, sizeof(struct UDP_packet), 0,
+                                        (struct sockaddr *)&cli_addr, &cli_len);
+                    DIE(rc < 0, "recvfrom failed");
+                    // int newsockfd =
+                    //         accept(UDP_listenfd, (struct sockaddr *)&cli_addr, &cli_len);
+                    // DIE(newsockfd < 0, "accept failed");
 
-                    // Add new socket to read file descriptors in poll.
-                    poll_fds[num_clients].fd = newsockfd;
-                    poll_fds[num_clients].events = POLLIN;
-                    num_clients++;
+                    // // Add new socket to read file descriptors in poll.
+                    // poll_fds[num_clients].fd = newsockfd;
+                    // poll_fds[num_clients].events = POLLIN;
+                    // num_clients++;
 
-                    server_print_connection_status(1,
-                                                   newsockfd,
-                                                   inet_ntoa(cli_addr.sin_addr),
-                                                   ntohs(cli_addr.sin_port));
-                    // printf("Noua conexiune de la %s, port %d, socket client %d\n",
-                    //              inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port),
-                    //              newsockfd);
+                    // server_print_connection_status(1,
+                    //                                newsockfd,
+                    //                                inet_ntoa(cli_addr.sin_addr),
+                    //                                ntohs(cli_addr.sin_port));
+                    // // printf("Noua conexiune de la %s, port %d, socket client %d\n",
+                    // //              inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port),
+                    // //              newsockfd);
                 } else if (poll_fds[i].fd == TCP_listenfd) {
                     // for (int j = 0; j < num_clients; j++)
                     // {
@@ -164,6 +192,7 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
                                       &received_packet,
                                       sizeof(received_packet));
                     DIE(rc < 0, "recv_all failed");
+                    UDP_parse_message(received_packet, &parsed_msg);
 
                     if (rc == 0) {
                         // Client disconnected.
@@ -200,20 +229,20 @@ void run_server(int UDP_listenfd, int TCP_listenfd)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        printf("\n Usage: %s <port>\n", argv[0]);
+        printf("\n Usage: %s <ip_address> <port>\n", argv[0]);
         return 1;
     }
 
     // Parse port number.
     uint16_t port;
-    int rc = sscanf(argv[1], "%hu", &port);
+    int rc = sscanf(argv[2], "%hu", &port);
     DIE(rc != 1, "Invalid port");
 
     // Open UDP socket.
     int UDP_listenfd = socket(AF_INET, SOCK_DGRAM, 0);
-    DIE(UDP_listenfd < 0, "Opening UDP socket failed");
+    DIE(UDP_listenfd < 0, "socket failed");
 
     // Set up the sockaddr_in struct.
     struct sockaddr_in serv_addr;
@@ -235,19 +264,7 @@ int main(int argc, char *argv[])
     rc = bind(UDP_listenfd, (const struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "bind failed");
 
-    // // timerfd
-    // int timerfd;
-    // timerfd = timerfd_create(CLOCK_REALTIME, 0);
-
-    // struct itimerspec spec;
-    // spec.it_value.tv_sec = 4;
-    // spec.it_value.tv_nsec = 0;
-    // spec.it_interval.tv_sec = 4;
-    // spec.it_interval.tv_nsec = 0;
-    // timerfd_settime(timerfd, 0, &spec, NULL);
-
-    // // run_chat_server(listenfd);
-    // run_chat_multi_server(listenfd, timerfd);
+    run_server(UDP_listenfd, 0);
 
     // Close all connections.
     close(UDP_listenfd);
