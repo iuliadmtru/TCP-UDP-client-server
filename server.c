@@ -15,12 +15,11 @@
 #include "util/helpers.h"
 #include "server_utils/util.h"
 
+#define DEFAULT_IP_ADDR "127.0.0.1"
+
 void run_server(int UDP_clientfd, int TCP_clientfd)
 {
-    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
     printf("Entered `run_server`...\n");
-    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-
 
     struct pollfd poll_fds[MAX_CONNECTIONS];
     int num_clients = 0, rc;
@@ -49,15 +48,17 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
     num_clients++;
 
     while (1) {
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
         printf("\nEntered server loop...\n");
-        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
         rc = poll(poll_fds, num_clients, -1);
         DIE(rc < 0, "poll failed");
 
         for (int i = 0; i < num_clients; i++) {
-            if (poll_fds[i].revents & POLLIN) {
+
+            printf("\nStart for with i = %d\n\n", i);
+
+            if (poll_fds[i].revents == POLLIN) {
+                printf("!!! Event for fd %d !!!\n", poll_fds[i].fd);
                 if (poll_fds[i].fd == 0) {
                     // Receive stdin command.
                     printf("Received stdin command...\n");
@@ -79,9 +80,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                                     &UDP_cli_len);
                     DIE(rc < 0, "recvfrom failed");
 
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                     printf("Received UDP packet...\n");
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                     // Parse UDP message.
                     UDP_parse_message(received_packet, &UDP_parsed_msg);
@@ -104,14 +103,13 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                                            &cli_len);
                     DIE(newsockfd < 0, "accept failed");
 
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                     printf("Received TCP connection...\n");
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                     // Add new socket to read file descriptors in poll.
                     poll_fds[num_clients].fd = newsockfd;
                     poll_fds[num_clients].events = POLLIN;
                     num_clients++;
+                    i++;
 
                     server_print_connection_status(1,
                                                    newsockfd,
@@ -119,13 +117,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                                                    ntohs(cli_addr.sin_port));
                 } else {
                     // Receive message on one of the client sockets.
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                     printf("Received TCP message...\n");
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-
-                    // TODO: check why this is not working for 2 clients
-                    // blocks here after the second client connects
-                    // problem at `recv_all`
 
                     int rc = recv_all(poll_fds[i].fd,
                                       &received_packet,
@@ -133,9 +125,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     DIE(rc < 0, "recv_all failed");
 
                     if (rc == 0) {
-                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                         printf("TCP connection closed...\n");
-                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                         // Client disconnected.
                         server_print_connection_status(0, poll_fds[i].fd, 0, 0);
@@ -148,9 +138,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                         }
                         num_clients--;
                     } else {
-                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
                         printf("Treat TCP message...\n");
-                        //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                         TCP_parse_message(received_packet, &TCP_parsed_msg);
                         // TODO: treat subscription messages from TCP clients.
@@ -176,14 +164,14 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        printf("\n Usage: %s <IP_ADDRESS> <PORT>\n", argv[0]);
+    if (argc != 2) {
+        printf("\n Usage: %s <PORT>\n", argv[0]);
         return 1;
     }
 
     // Parse port number.
     uint16_t port;
-    int rc = sscanf(argv[2], "%hu", &port);
+    int rc = sscanf(argv[1], "%hu", &port);
     DIE(rc != 1, "Invalid port");
 
     // Set up the sockaddr_in struct.
@@ -193,7 +181,7 @@ int main(int argc, char *argv[])
     memset(&serv_addr, 0, socket_len);
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
-    rc = inet_pton(AF_INET, argv[1], &serv_addr.sin_addr.s_addr);
+    rc = inet_pton(AF_INET, DEFAULT_IP_ADDR, &serv_addr.sin_addr.s_addr);
     DIE(rc <= 0, "inet_pton failed");
 
     // ---------------------- UDP ---------------------- 

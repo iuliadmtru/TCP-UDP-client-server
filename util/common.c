@@ -6,11 +6,15 @@
 
 int recv_all(int sockfd, void *buffer, size_t len)
 {
+    printf("Entered `recv_all`...\n");
+
     size_t bytes_received = 0;
     size_t bytes_remaining = len;
     char *buff = buffer;
 
     while (bytes_remaining) {
+        printf("Receive bytes...\n");
+
         ssize_t rc = recv(sockfd, buff + bytes_received, bytes_remaining, 0);
         DIE(rc == -1, "recv failed\n");
         if (rc == 0)
@@ -19,6 +23,8 @@ int recv_all(int sockfd, void *buffer, size_t len)
         bytes_received += rc;
         bytes_remaining -= rc;
     }
+
+    printf("Exiting `recv_all` after receiving message %s...\n", (char *)buffer);
 
     return recv(sockfd, buffer, len, 0);
 }

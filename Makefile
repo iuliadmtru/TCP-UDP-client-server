@@ -11,13 +11,13 @@ server: server.c util/common.c util/helpers.c server_utils/util.c
 	gcc $(CFLAGS) server.c util/common.c util/helpers.c server_utils/util.c -o server $(LIBS)
 
 subscriber:
-	gcc $(CFLAGS) tcp_client/tcp_client.c util/common.c util/helpers.c -o subscriber $(LIBS)
+	gcc $(CFLAGS) tcp_client/tcp_client.c util/common.c util/helpers.c tcp_client/util.c -o subscriber $(LIBS)
 
 run_server:
-	./server ${IP_SERVER} ${PORT}
+	./server ${PORT}
 
 run_server_valgrind:
-	valgrind ./server ${IP_SERVER} ${PORT}
+	valgrind ./server ${PORT}
 
 run_subscriber:
 	./subscriber ${ID_CLIENT} ${IP_SERVER} ${PORT}

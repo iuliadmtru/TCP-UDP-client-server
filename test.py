@@ -18,7 +18,7 @@ port = "12345"
 ip = "127.0.0.1"
 
 # default UDP client path
-udp_client_path = "pcom_hw2_udp_client"
+udp_client_path = "udp_client"
 
 # default size of test output line
 test_output_line_size = 40

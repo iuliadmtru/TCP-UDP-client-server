@@ -13,6 +13,7 @@
 
 #include "../util/common.h"
 #include "../util/helpers.h"
+#include "util.h"
 
 void run_client(int sockfd)
 {
@@ -23,29 +24,32 @@ void run_client(int sockfd)
     struct packet recv_packet;
 
     struct pollfd poll_fds[MAX_CONNECTIONS];
-    int nfds = 0, rc;
+    int num_fds = 0, rc;
 
     // Add stdin to poll for command reading.
-    poll_fds[nfds].fd = STDIN_FILENO;
-    poll_fds[nfds].events = POLLIN;
-    nfds++;
+    poll_fds[num_fds].fd = STDIN_FILENO;
+    poll_fds[num_fds].events = POLLIN;
+    num_fds++;
 
     // Add client socket.
-    poll_fds[nfds].fd = sockfd;
-    poll_fds[nfds].events = POLLIN;
-    nfds++;
+    poll_fds[num_fds].fd = sockfd;
+    poll_fds[num_fds].events = POLLIN;
+    num_fds++;
 
     while (1) {
-        rc = poll(poll_fds, nfds, -1);
+        rc = poll(poll_fds, num_fds, -1);
         DIE(rc < 0, "poll failed");
 
         if ((poll_fds[0].revents & POLLIN) != 0) {
             // Receive command from stdin.
-            printf("Received stdin command...\n");
+            printf("\nReceived stdin command...\n");
+
             char tcp_cmd[CMD_MAXSIZE];
             scanf("%s", tcp_cmd);
             if (strcmp(tcp_cmd, "exit") == 0) {
-                // server_exit(poll_fds, num_clients);
+                printf("Received exit command...\n");
+
+                tcp_client_exit(sockfd, poll_fds, num_fds);
             } else if (strcmp(tcp_cmd, "subscribe") == 0) {
                 // Send subscribe message to server.
                 char topic[TOPIC_SIZE];
@@ -73,10 +77,13 @@ void run_client(int sockfd)
             }
         } else if ((poll_fds[1].revents & POLLIN) != 0) {
             // New connection.
-            // TODO: ?
             int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
             DIE(rc < 0, "recv_all failed");
-            printf("Received new connection: %s...\n", recv_packet.message);
+
+            printf("\nReceived new connection: %s...\n", recv_packet.message);
+
+            if (rc == 0)  // Connection ended.
+                tcp_client_exit(sockfd, poll_fds, num_fds);
         } else {
             // se trateaza mesajele de la un client...
             // TODO: Receive messages from UDP subscriptions.

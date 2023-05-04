@@ -1,5 +1,5 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _SERVER_UTIL_H
+#define _SERVER_UTIL_H
 
 #include <stdio.h>
 #include <stdlib.h>
