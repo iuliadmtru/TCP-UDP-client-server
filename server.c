@@ -47,6 +47,9 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
     poll_fds[2].events = POLLIN;
     num_clients++;
 
+    // Create topics array.
+    struct topics *topics = topics_array_create();
+
     while (1) {
         printf("\nEntered server loop...\n");
 
@@ -58,14 +61,18 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
             printf("\nStart for with i = %d\n\n", i);
 
             if (poll_fds[i].revents == POLLIN) {
+
                 printf("!!! Event for fd %d !!!\n", poll_fds[i].fd);
+
                 if (poll_fds[i].fd == 0) {
                     // Receive stdin command.
+
                     printf("Received stdin command...\n");
+
                     char server_cmd[CMD_MAXSIZE];
                     scanf("%s", server_cmd);
                     if (strcmp(server_cmd, "exit") == 0)
-                        server_exit(poll_fds, num_clients);
+                        server_exit(poll_fds, num_clients, topics);
                     else
                         printf("Unknown command\n");
                 } else if (poll_fds[i].fd == UDP_clientfd) {
@@ -94,6 +101,15 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
 
                     // TODO: send message to all subscribed TCP clients.
+
+                    // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
+                    // for (int j = 0; j < num_clients; j++)
+                    // {
+                    //     if (j != i && poll_fds[j].fd != UDP_clientfd)
+                    //     {
+                    //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
+                    //     }
+                    // }
                 } else if (poll_fds[i].fd == TCP_clientfd) {
                     // New TCP connection.
                     struct sockaddr_in cli_addr;
@@ -111,6 +127,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     num_clients++;
                     i++;
 
+                    // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
                     server_print_connection_status(1,
                                                    newsockfd,
                                                    inet_ntoa(cli_addr.sin_addr),
@@ -128,6 +145,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                         printf("TCP connection closed...\n");
 
                         // Client disconnected.
+                        // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
                         server_print_connection_status(0, poll_fds[i].fd, 0, 0);
                         close(poll_fds[i].fd);
 
@@ -141,20 +159,49 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                         printf("Treat TCP message...\n");
 
                         TCP_parse_message(received_packet, &TCP_parsed_msg);
-                        // TODO: treat subscription messages from TCP clients.
 
-                        // UDP_print_subscription_message();
                         printf("S-a primit de la clientul de pe socketul %d mesajul: %s\n",
                                      poll_fds[i].fd, received_packet.message);
+                        
+                        // Find the topic to subscribe to/unsubscribe from.
+                        struct topic *topic =
+                            find_topic(topics, TCP_parsed_msg.topic);
 
-                        // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
-                        // for (int j = 0; j < num_clients; j++)
-                        // {
-                        //     if (j != i && poll_fds[j].fd != UDP_clientfd)
-                        //     {
-                        //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
-                        //     }
-                        // }
+                        if (TCP_parsed_msg.subscribe_status == 1) {
+                            printf("Before subscribing...\n");
+                            topics_array_print(topics);
+
+                            // Create subscriber.
+                            struct subscriber sub =
+                                subscriber_create(TCP_parsed_msg.id,
+                                                  TCP_parsed_msg.sf);
+                            
+                            // If the topic is not in the list, add it.
+                            if (!topic) {
+                                topics_array_add_topic(topics,
+                                                       TCP_parsed_msg.topic);
+                            }
+
+                            // Subscribe.
+                            subscribe_to_topic(topics->topics[topics->size - 1],
+                                               sub);
+
+                            printf("After subscribing...\n");
+                            topics_array_print(topics);
+                        } else {
+                            printf("Before unsubscribing...\n");
+                            topics_array_print(topics);
+
+                            // Unsubscribe.
+                            if (!topic) {
+                                printf("Cannot unsubscribe - topic not found.\n");
+                                continue;
+                            } 
+                            unsubscribe_from_topic(topic, TCP_parsed_msg.id);
+
+                            printf("After unsubscribing...\n");
+                            topics_array_print(topics);
+                        }
                     }
                 }
             }

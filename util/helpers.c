@@ -103,11 +103,13 @@ void TCP_parse_message(struct packet packet, void *destination)
 
     struct TCP_message *parsed_msg = (struct TCP_message *)destination;
     sscanf(packet.message,
-           "%hhu %s %hhu",
+           "%s %hhu %s %hhu",
+           parsed_msg->id,
            &parsed_msg->subscribe_status,
            parsed_msg->topic,
            &parsed_msg->sf);
 
+    printf("Parsed id: %s\n", parsed_msg->id);
     printf("Parsed subscribe status: %d\n", parsed_msg->subscribe_status);
     printf("Parsed topic: %s\n", parsed_msg->topic);
     printf("Parsed sf: %d\n", parsed_msg->sf);

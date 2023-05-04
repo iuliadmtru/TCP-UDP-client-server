@@ -10,6 +10,7 @@ int recv_all(int sockfd, void *buff, size_t len);
 /*
  * Maximum sizes.
  */
+#define ID_MAXSIZE 10
 #define CMD_MAXSIZE 20
 #define MSG_MAXSIZE 1551
 #define TOPIC_SIZE 50
@@ -29,13 +30,14 @@ struct UDP_message {
 };
 
 struct TCP_message {
+    char id[ID_MAXSIZE];
     uint8_t subscribe_status;
     char topic[TOPIC_SIZE];
     uint8_t sf;
 };
 
 struct subscriber {
-    char id[10];
+    char id[ID_MAXSIZE];
     uint8_t sf;
 };
 
@@ -60,9 +62,9 @@ void topic_free(struct topic *topic);
 
 void topic_print(struct topic *topic);
 
-void subscribe_to_topic(struct subscriber sub, struct topic *topic);
+void subscribe_to_topic(struct topic *topic, struct subscriber sub);
 
-void unsubscribe_from_topic(char *id, struct topic *topic);
+void unsubscribe_from_topic(struct topic *topic, char *id);
 
 struct topics *topics_array_create();
 
@@ -71,5 +73,7 @@ void topics_array_free(struct topics *topics);
 void topics_array_print(struct topics *topics);
 
 void topics_array_add_topic(struct topics* topics, char *name);
+
+struct topic *find_topic(struct topics* topics, char *name);
 
 #endif

@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <string.h>
+#include <stdio.h>
 
 int recv_all(int sockfd, void *buffer, size_t len)
 {
@@ -87,30 +88,38 @@ void topic_free(struct topic *topic)
 
 void topic_print(struct topic *topic)
 {
-    printf("Topic with %d subscribers:\n", topic->num_subscribers);
+    printf("Topic %s with %d subscribers:\n", topic->name , topic->num_subscribers);
     for (int i = 0; i < topic->num_subscribers; i++) {
         printf("\t");
         subscriber_print(topic->subscribers[i]);
     }
 }
 
-void subscribe_to_topic(struct subscriber sub, struct topic *topic)
+void subscribe_to_topic(struct topic *topic, struct subscriber sub)
 {
     topic->subscribers[topic->num_subscribers] = sub;
     topic->num_subscribers++;
 }
 
-void unsubscribe_from_topic(char *id, struct topic *topic)
+void unsubscribe_from_topic(struct topic *topic, char *id)
 {
     int i = 0, n = topic->num_subscribers;
-    DIE(n == 0, "Cannot unsubscribe from empty topic list.\n");
+    if (n == 0) {
+        // TODO: print la stderr
+        printf("Cannot unsubscribe from topic with no subscribers.\n");
+        return;
+    }
 
     while (strcmp(topic->subscribers[i].id, id) != 0 && i < n)
         i++;
     
     // printf("Remove subscriber %d\n", i);
 
-    DIE(i == n, "Client is not subscribed to this topic.\n");
+    if (i == n) {
+        // TODO: print la stderr
+        printf("Client is not subscribed to this topic.\n");
+        return;
+    }
 
     // Found subscriber -> remove from list and decrease subscribers number.
     while (i < n - 1) {
@@ -156,4 +165,17 @@ void topics_array_add_topic(struct topics* topics, char *name)
     struct topic *topic = topic_create(name);
     topics->topics[topics->size] = topic;
     topics->size++;
+}
+
+struct topic *find_topic(struct topics* topics, char *name)
+{
+    struct topic *topic = NULL;
+    for (int i = 0; i < topics->size; i++) {
+        if (strcmp(topics->topics[i]->name, name) == 0) {
+            topic = topics->topics[i];
+            break;
+        }
+    }
+
+    return topic;
 }

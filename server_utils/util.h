@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <poll.h>
 
-void server_exit(struct pollfd *poll_fds, int num_clients);
+#include "../util/common.h"
+
+void server_exit(struct pollfd *poll_fds, int num_clients, struct topics *topics);
 
 #endif

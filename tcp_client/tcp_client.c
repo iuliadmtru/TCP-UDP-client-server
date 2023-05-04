@@ -15,7 +15,7 @@
 #include "../util/helpers.h"
 #include "util.h"
 
-void run_client(int sockfd)
+void run_client(int sockfd, char *id)
 {
     char buf[MSG_MAXSIZE + 1];
     memset(buf, 0, MSG_MAXSIZE + 1);
@@ -57,7 +57,7 @@ void run_client(int sockfd)
                 scanf("%s", topic);
                 scanf("%hhu", &sf);
 
-                snprintf(sent_packet.message, TOPIC_SIZE + 4, "%hhu %s %hhu", 1, topic, sf);
+                snprintf(sent_packet.message, sizeof(struct TCP_message), "%s %hhu %s %hhu", id, 1, topic, sf);
                 send_all(sockfd, &sent_packet, sizeof(sent_packet));
                 TCP_client_print_subscription_status(1);
 
@@ -67,7 +67,7 @@ void run_client(int sockfd)
                 char topic[TOPIC_SIZE];
                 scanf("%s", topic);
 
-                snprintf(sent_packet.message, TOPIC_SIZE + 4, "%hhu %s %hhu", 0, topic, 0);
+                snprintf(sent_packet.message, sizeof(struct TCP_message), "%s %hhu %s %hhu", id, 0, topic, 0);
                 send_all(sockfd, &sent_packet, sizeof(sent_packet));
                 TCP_client_print_subscription_status(0);
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
     rc = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "connect failed");
 
-    run_client(sockfd);
+    run_client(sockfd, argv[1]);
 
     // Disconnect and close socket.
     close(sockfd);
