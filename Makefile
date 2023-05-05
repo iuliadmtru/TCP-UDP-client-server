@@ -17,7 +17,7 @@ run_server:
 	./server ${PORT}
 
 run_server_valgrind:
-	valgrind ./server ${PORT}
+	valgrind --track-origins=yes ./server ${PORT}
 
 run_subscriber:
 	./subscriber ${ID_CLIENT} ${IP_SERVER} ${PORT}

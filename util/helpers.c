@@ -33,63 +33,127 @@ void TCP_client_print_subscription_status(int subscribed)
     printf("%s\n", msg);
 }
 
-void UDP_parse_message(struct packet packet, void *destination)
+void UDP_parse_message(struct packet packet,
+                       char *ip,
+                       uint16_t *port,
+                       void *destination)
 {
-    // printf("\nEntered `UDP_parse_message`...\n");
+    printf("\nEntered `UDP_parse_message`...\n");
 
 
     struct UDP_message *parsed_msg = (struct UDP_message *)destination;
+    char *addr = packet.message;
+
+    // Copy ip address.
+    memcpy(parsed_msg->ip, ip, 15);
+    // Copy port.
+    memcpy(&parsed_msg->port, (char *)port, sizeof(parsed_msg->port));
     // Parse and terminate topic.
-    memcpy(parsed_msg->topic, packet.message, TOPIC_SIZE);
-    parsed_msg->topic[TOPIC_SIZE] = '\0';
+    memcpy(parsed_msg->topic, addr, sizeof(parsed_msg->topic));
+    addr += sizeof(parsed_msg->topic);
+    // parsed_msg->topic[TOPIC_SIZE] = '\0';
     // Parse data type.
-    memcpy(&parsed_msg->data_type, packet.message + TOPIC_SIZE, sizeof(parsed_msg->data_type));
+    memcpy(&parsed_msg->data_type, addr, sizeof(parsed_msg->data_type));
+    addr += sizeof(parsed_msg->data_type);
     // Parse and terminate content.
-    memcpy(parsed_msg->content, packet.message + TOPIC_SIZE + 1, CONTENT_MAXSIZE);
+    memcpy(parsed_msg->content, addr, sizeof(parsed_msg->content));
     parsed_msg->content[CONTENT_MAXSIZE] = '\0';
 
-    // printf("Parsed topic: %s\n", parsed_msg->topic);
-    // printf("Parsed data type: %d\n", parsed_msg->data_type);
-    // printf("Parsed content: %s\n", parsed_msg->content);
+    printf("Parsed ip: %s\n", parsed_msg->ip);
+    printf("Parsed port: %d\n", parsed_msg->port);
+    printf("Parsed topic: %s\n", parsed_msg->topic);
+    printf("Parsed data type: %d\n", parsed_msg->data_type);
+    printf("Parsed content: %s\n", parsed_msg->content);
 
 
-    // printf("Exiting `UDP_parse_message`...\n\n");
+    printf("Exiting `UDP_parse_message`...\n\n");
 }
 
-void UDP_print_subscription_message(char *ip,
-                                    uint16_t port,
-                                    char *topic,
-                                    uint8_t data_type,
-                                    char *content)
+void packet_from_UDP_msg(struct packet *packet, struct UDP_message UDP_msg)
+{
+    printf("\nEntered `packet_from_UDP_message`...\n");
+
+    // char *addr_sender_details = packet->sender_details;
+    // // Parse ip.
+    // memcpy(addr_sender_details, UDP_msg.ip, sizeof(UDP_msg.ip));
+    // addr_sender_details += sizeof(UDP_msg.ip);
+    // // Parse port.
+    // sprintf(addr_sender_details, "%d", UDP_msg.port);
+
+    char *addr_msg = packet->message;
+    // Parse ip.
+    memcpy(addr_msg, UDP_msg.ip, sizeof(UDP_msg.ip));
+    addr_msg += sizeof(UDP_msg.ip);
+    // Parse port.
+    sprintf(addr_msg, " %hu ", UDP_msg.port);
+    printf("Port %hu was parsed as %s", UDP_msg.port, addr_msg);
+    printf("Pakcet so far: %s\n", packet->message);
+    addr_msg += sizeof(UDP_msg.port);
+    // Parse topic.
+    memcpy(addr_msg, UDP_msg.topic, sizeof(UDP_msg.topic));
+    addr_msg += sizeof(UDP_msg.topic);
+    // Parse data type.
+    sprintf(addr_msg, " %hhu ", UDP_msg.data_type);
+    // Parse content.
+    memcpy(addr_msg, UDP_msg.content, sizeof(UDP_msg.content));
+
+    printf("Parsed packet: %s\n", packet->message);
+
+    printf("Exiting `packet_from_UDP_message`...\n\n");
+
+    // sprintf(packet->sender_details,
+    //         "%s %hu",
+    //         UDP_msg.ip,
+    //         UDP_msg.port);
+
+    // sprintf(packet->message,
+    //         "%s %hhu %s",
+    //         UDP_msg.topic,
+    //         UDP_msg.data_type,
+    //         UDP_msg.content);
+}
+
+void UDP_msg_from_packet(struct UDP_message *UDP_msg, struct packet packet)
+{
+    sscanf(packet.message,
+           "%s %hu %s %hhu %s",
+           UDP_msg->ip,
+           &UDP_msg->port,
+           UDP_msg->topic,
+           &UDP_msg->data_type,
+           UDP_msg->content);
+}
+
+void UDP_print_subscription_message(struct UDP_message UDP_msg)
 {
     printf("---------------- UDP message ----------------\n");
-    printf("%s:%hu - %s - ", ip, port, topic);
+    printf("%s:%hu - %s - ", UDP_msg.ip, UDP_msg.port, UDP_msg.topic);
 
     uint8_t sign;
-    switch (data_type) {
+    switch (UDP_msg.data_type) {
         case 0:
-            sign = *(uint8_t *)content;
-            uint32_t data_int = ntohl(*(uint32_t *)(content + 1));
+            sign = *(uint8_t *)UDP_msg.content;
+            uint32_t data_int = ntohl(*(uint32_t *)(UDP_msg.content + 1));
             sign ? printf("INT - -%d\n", data_int) :
                    printf("INT - %d\n", data_int);
             break;
         case 1:
-            uint16_t data_short_real = ntohs(*(uint16_t *)content);
+            uint16_t data_short_real = ntohs(*(uint16_t *)UDP_msg.content);
             printf("SHORT_REAL - %.2f\n", (float)data_short_real / 100);
             break;
         case 2:
-            sign = *(uint8_t *)content;
-            uint32_t significand = ntohl(*(uint32_t *)(content + 1));
-            uint8_t exponent = *(uint8_t *)(content + 5);
+            sign = *(uint8_t *)UDP_msg.content;
+            uint32_t significand = ntohl(*(uint32_t *)(UDP_msg.content + 1));
+            uint8_t exponent = *(uint8_t *)(UDP_msg.content + 5);
             float data_float = significand / pow(10, exponent);
             sign ? printf("FLOAT - -%.*f\n", exponent, data_float) :
                    printf("FLOAT - %.*f\n", exponent, data_float);
             break;
         case 3:
-            printf("STRING - %s\n", content);
+            printf("STRING - %s\n", UDP_msg.content);
             break;
         default:
-            printf("UNKNOWN - %s\n", content);
+            printf("UNKNOWN - %s\n", UDP_msg.content);
             break;
     }
 

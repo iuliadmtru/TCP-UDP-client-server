@@ -1,5 +1,5 @@
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#ifndef _UTIL_COMMON_H__
+#define _UTIL_COMMON_H__
 
 #include <stddef.h>
 #include <stdint.h>
@@ -12,7 +12,8 @@ int recv_all(int sockfd, void *buff, size_t len);
  */
 #define ID_MAXSIZE 10
 #define CMD_MAXSIZE 20
-#define MSG_MAXSIZE 1551
+#define MSG_MAXSIZE 1583
+// #define MSG_MAXSIZE 1551
 #define TOPIC_SIZE 50
 #define CONTENT_MAXSIZE 1500
 
@@ -20,10 +21,13 @@ int recv_all(int sockfd, void *buff, size_t len);
 #define MAX_TOPICS 1000
 
 struct packet {
+    // char sender_details[32];
     char message[MSG_MAXSIZE + 1];
 };
 
 struct UDP_message {
+    char ip[16];
+    uint16_t port;
     char topic[TOPIC_SIZE];
     uint8_t data_type;
     char content[CONTENT_MAXSIZE];
@@ -37,6 +41,7 @@ struct TCP_message {
 };
 
 struct subscriber {
+    int fd;
     char id[ID_MAXSIZE];
     uint8_t sf;
 };
@@ -52,7 +57,7 @@ struct topics {
     int size;
 };
 
-struct subscriber subscriber_create(char *id, uint8_t sf);
+struct subscriber subscriber_create(int fd, char *id, uint8_t sf);
 
 void subscriber_print(struct subscriber sub);
 
@@ -73,6 +78,8 @@ void topics_array_free(struct topics *topics);
 void topics_array_print(struct topics *topics);
 
 void topics_array_add_topic(struct topics* topics, char *name);
+
+void topics_array_remove_topic(struct topics *topics, char *name);
 
 struct topic *find_topic(struct topics* topics, char *name);
 

@@ -9,6 +9,7 @@
 #include <poll.h>
 
 #include "util.h"
+#include "common.h"
 
 void tcp_client_exit(int sockfd, struct pollfd *poll_fds, int num_fds)
 {

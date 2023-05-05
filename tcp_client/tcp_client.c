@@ -14,6 +14,7 @@
 #include "../util/common.h"
 #include "../util/helpers.h"
 #include "util.h"
+#include "common.h"
 
 void run_client(int sockfd, char *id)
 {
@@ -73,20 +74,25 @@ void run_client(int sockfd, char *id)
 
                 printf("Sent unsubscribe message: %s...\n", sent_packet.message);
             } else {
-                printf("Unknown command\n");
+                fprintf(stderr, "Unknown command\n");
             }
         } else if ((poll_fds[1].revents & POLLIN) != 0) {
-            // New connection.
+            // New message.
             int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
             DIE(rc < 0, "recv_all failed");
 
-            printf("\nReceived new connection: %s...\n", recv_packet.message);
+            printf("\nReceived new message: %s...\n", recv_packet.message);
 
             if (rc == 0)  // Connection ended.
                 tcp_client_exit(sockfd, poll_fds, num_fds);
+            
+            // Received message from UDP subscription.
+            struct UDP_message UDP_recv;
+            UDP_msg_from_packet(&UDP_recv, recv_packet);
+            UDP_print_subscription_message(UDP_recv);
         } else {
-            // se trateaza mesajele de la un client...
-            // TODO: Receive messages from UDP subscriptions.
+            // Receive messages from UDP subscriptions.
+            printf("\nReceived something...\n");
         }
     }
 }
@@ -122,6 +128,17 @@ int main(int argc, char *argv[])
     // Connect to server.
     rc = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "connect failed");
+
+    // // Let the server know the client's ID.
+    // struct packet sent_packet;
+    // snprintf(sent_packet.message,
+    //          sizeof(struct TCP_message),
+    //          "%s %hhu %s %hhu",
+    //          argv[1],
+    //          0,
+    //          0,
+    //          0);
+    // send_all(sockfd, &sent_packet, sizeof(sent_packet));
 
     run_client(sockfd, argv[1]);
 

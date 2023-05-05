@@ -74,7 +74,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     if (strcmp(server_cmd, "exit") == 0)
                         server_exit(poll_fds, num_clients, topics);
                     else
-                        printf("Unknown command\n");
+                        fprintf(stderr, "Unknown command\n");
                 } else if (poll_fds[i].fd == UDP_clientfd) {
                     // Receive UDP packet.
                     struct sockaddr_in UDP_cli_addr;
@@ -90,26 +90,28 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     printf("Received UDP packet...\n");
 
                     // Parse UDP message.
-                    UDP_parse_message(received_packet, &UDP_parsed_msg);
+                    uint16_t port = ntohs(UDP_cli_addr.sin_port);
+                    UDP_parse_message(received_packet,
+                                      inet_ntoa(UDP_cli_addr.sin_addr),
+                                      &port,
+                                      &UDP_parsed_msg);
+                    
+                    UDP_print_subscription_message(UDP_parsed_msg);
 
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-                    UDP_print_subscription_message(inet_ntoa(UDP_cli_addr.sin_addr),
-                                                ntohs(UDP_cli_addr.sin_port),
-                                                UDP_parsed_msg.topic,
-                                                UDP_parsed_msg.data_type,
-                                                UDP_parsed_msg.content);
-                    //////////////////////////////////////////// REMOVE ////////////////////////////////////////////
-
-                    // TODO: send message to all subscribed TCP clients.
-
-                    // /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
-                    // for (int j = 0; j < num_clients; j++)
-                    // {
-                    //     if (j != i && poll_fds[j].fd != UDP_clientfd)
-                    //     {
-                    //         send_all(poll_fds[j].fd, &received_packet, sizeof(received_packet));
-                    //     }
-                    // }
+                    // Search for the topic in the topic list.
+                    struct topic *topic =
+                        find_topic(topics, UDP_parsed_msg.topic);
+                    if (!topic)  // There are no subscribers for this topic.
+                        continue;
+                    
+                    // Send the message to all subscribers.
+                    struct packet sent_packet;
+                    packet_from_UDP_msg(&sent_packet, UDP_parsed_msg);
+                    for (int i = 0; i < topic->num_subscribers; i++) {
+                        send_all(topic->subscribers[i].fd,
+                                 &sent_packet,
+                                 sizeof(sent_packet));
+                    }
                 } else if (poll_fds[i].fd == TCP_clientfd) {
                     // New TCP connection.
                     struct sockaddr_in cli_addr;
@@ -125,7 +127,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     poll_fds[num_clients].fd = newsockfd;
                     poll_fds[num_clients].events = POLLIN;
                     num_clients++;
-                    i++;
+                    i++;  // Don't consider this client at this iteration.
 
                     // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
                     server_print_connection_status(1,
@@ -145,13 +147,12 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                         printf("TCP connection closed...\n");
 
                         // Client disconnected.
-                        // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
+                        // TODO!!!!!!!!!!!!!!: change fd to TCP_id
                         server_print_connection_status(0, poll_fds[i].fd, 0, 0);
                         close(poll_fds[i].fd);
 
                         // Remove closed socket from poll.
-                        for (int j = i; j < num_clients - 1; j++)
-                        {
+                        for (int j = i; j < num_clients - 1; j++) {
                             poll_fds[j] = poll_fds[j + 1];
                         }
                         num_clients--;
@@ -173,7 +174,8 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
 
                             // Create subscriber.
                             struct subscriber sub =
-                                subscriber_create(TCP_parsed_msg.id,
+                                subscriber_create(poll_fds[i].fd,
+                                                  TCP_parsed_msg.id,
                                                   TCP_parsed_msg.sf);
                             
                             // If the topic is not in the list, add it.
@@ -198,6 +200,11 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                                 continue;
                             } 
                             unsubscribe_from_topic(topic, TCP_parsed_msg.id);
+
+                            // If topic has no subscribers, remove it.
+                            if (topic->num_subscribers == 0) {
+                                topics_array_remove_topic(topics, topic->name);
+                            }
 
                             printf("After unsubscribing...\n");
                             topics_array_print(topics);

@@ -31,13 +31,16 @@ void server_print_connection_status(int connected,
 
 void TCP_client_print_subscription_status(int subscribed);
 
-void UDP_parse_message(struct packet packet, void *destination);
+void UDP_parse_message(struct packet packet,
+                       char *ip,
+                       uint16_t *port,
+                       void *destination);
 
-void UDP_print_subscription_message(char *ip,
-                                    uint16_t port,
-                                    char *topic,
-                                    uint8_t data_type,
-                                    char *content);
+void packet_from_UDP_msg(struct packet *packet, struct UDP_message UDP_msg);
+
+void UDP_msg_from_packet(struct UDP_message *UDP_msg, struct packet packet);
+
+void UDP_print_subscription_message(struct UDP_message UDP_msg);
 
 void TCP_parse_message(struct packet packet, void *destination);
 

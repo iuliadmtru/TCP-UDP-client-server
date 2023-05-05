@@ -1,3 +1,5 @@
 udp_client/utils/__pycache__/
 util/test.c
 util/test
+tcp_client/test.c
+tcp_client/test

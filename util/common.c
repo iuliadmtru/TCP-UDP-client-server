@@ -48,9 +48,10 @@ int send_all(int sockfd, void *buffer, size_t len)
     return send(sockfd, buffer, len, 0);
 }
 
-struct subscriber subscriber_create(char *id, uint8_t sf)
+struct subscriber subscriber_create(int fd, char *id, uint8_t sf)
 {
     struct subscriber sub;
+    sub.fd = fd;
     sub.sf = sf;
     strcpy(sub.id, id);
 
@@ -59,7 +60,7 @@ struct subscriber subscriber_create(char *id, uint8_t sf)
 
 void subscriber_print(struct subscriber sub)
 {
-    printf("Subscriber with {ID = %s, sf = %hhu}\n", sub.id, sub.sf);
+    printf("Subscriber with {file descriptor = %d, ID = %s, sf = %hhu}\n", sub.fd, sub.id, sub.sf);
 }
 
 struct topic *topic_create(char *name)
@@ -165,6 +166,35 @@ void topics_array_add_topic(struct topics* topics, char *name)
     struct topic *topic = topic_create(name);
     topics->topics[topics->size] = topic;
     topics->size++;
+}
+
+void topics_array_remove_topic(struct topics *topics, char *name)
+{
+    int n = topics->size;
+    if (n == 0) {
+        // TODO: print to stderr.
+        printf("Cannot remove topic from empty topic list.\n");
+        return;
+    }
+
+    int i = 0;
+    while (i < n && strcmp(topics->topics[i]->name, name) != 0)
+        i++;
+    
+    if (i == n) {
+        // TODO: print to stderr.
+        printf("Cannot remove topic - topic not found.\n");
+        return;
+    }
+
+    topic_free(topics->topics[i]);
+
+    while (i < n - 1) {
+        topics->topics[i] = topics->topics[i + 1];
+        i++;
+    }
+
+    topics->size--;
 }
 
 struct topic *find_topic(struct topics* topics, char *name)
