@@ -1,7 +1,10 @@
 [{
-		"description":	"topic {a_non_negative_int} - type {INT} - value{10}",
-		"payload_base64":	"YV9ub25fbmVnYXRpdmVfaW50AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAo="
-	}, {
-		"description":	"topic {a_negative_int} - type {INT} - value{-10}",
-		"payload_base64":	"YV9uZWdhdGl2ZV9pbnQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAo="
-	}]
+	"description":	"topic {a_non_negative_int} - type {INT} - value{10}",
+	"payload_base64":	"YV9ub25fbmVnYXRpdmVfaW50AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAo="
+}, {
+	"description":	"topic {a_negative_int} - type {INT} - value{-10}",
+	"payload_base64":	"YV9uZWdhdGl2ZV9pbnQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAo="
+}, {
+	"description":	"topic {ana_string_announce} - type {STRING} - value{Ana are mere}",
+	"payload_base64":	"YW5hX3N0cmluZ19hbm5vdW5jZQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQW5hIGFyZSBtZXJl"
+}]
