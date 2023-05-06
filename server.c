@@ -14,6 +14,7 @@
 #include "util/common.h"
 #include "util/helpers.h"
 #include "server_utils/util.h"
+#include "tcp_client/common.h"
 
 #define DEFAULT_IP_ADDR "127.0.0.1"
 
@@ -50,6 +51,9 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
     // Create topics array.
     struct topics *topics = topics_array_create();
 
+    // Create TCP clients array.
+    struct TCP_clients *clients = TCP_clients_array_create();
+
     while (1) {
         printf("\nEntered server loop...\n");
 
@@ -58,7 +62,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
 
         for (int i = 0; i < num_clients; i++) {
 
-            printf("\nStart for with i = %d\n\n", i);
+            // printf("\nStart for with i = %d\n\n", i);
 
             if (poll_fds[i].revents == POLLIN) {
 
@@ -72,7 +76,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     char server_cmd[CMD_MAXSIZE];
                     scanf("%s", server_cmd);
                     if (strcmp(server_cmd, "exit") == 0)
-                        server_exit(poll_fds, num_clients, topics);
+                        server_exit(poll_fds, num_clients, topics, clients);
                     else
                         fprintf(stderr, "Unknown command\n");
                 } else if (poll_fds[i].fd == UDP_clientfd) {
@@ -106,7 +110,7 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     
                     // Send the message to all subscribers.
                     struct packet sent_packet;
-                    packet_from_UDP_msg(&sent_packet, UDP_parsed_msg);
+                    memcpy(sent_packet.message, (char *)&UDP_parsed_msg, sizeof(UDP_parsed_msg));
                     for (int i = 0; i < topic->num_subscribers; i++) {
                         send_all(topic->subscribers[i].fd,
                                  &sent_packet,
@@ -123,17 +127,34 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
 
                     printf("Received TCP connection...\n");
 
+                    // // Receive a message with the client's details.
+                    // int rc = recv_all(newsockfd,
+                    //                   &received_packet,
+                    //                   sizeof(received_packet));
+                    // DIE(rc < 0, "recv_all failed");
+                    // // Parse the message and add the client's ID to the list.
+                    // struct TCP_message TCP_msg =
+                    //     *(struct TCP_message *)received_packet.message;
+                    TCP_clients_array_add_client(clients,
+                                                 "",
+                                                 newsockfd,
+                                                 inet_ntoa(cli_addr.sin_addr),
+                                                 ntohs(cli_addr.sin_port));
+                    
+                    TCP_clients_array_print(clients);
+
                     // Add new socket to read file descriptors in poll.
                     poll_fds[num_clients].fd = newsockfd;
                     poll_fds[num_clients].events = POLLIN;
                     num_clients++;
-                    i++;  // Don't consider this client at this iteration.
 
-                    // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
-                    server_print_connection_status(1,
-                                                   newsockfd,
-                                                   inet_ntoa(cli_addr.sin_addr),
-                                                   ntohs(cli_addr.sin_port));
+                    // // TODO!!!!!!!!!!!!!!: change newsockfd to TCP_id
+                    // server_print_connection_status(1,
+                    //                                newsockfd,
+                    //                                inet_ntoa(cli_addr.sin_addr),
+                    //                                ntohs(cli_addr.sin_port));
+
+                    i++;  // Don't consider this client at this iteration.
                 } else {
                     // Receive message on one of the client sockets.
                     printf("Received TCP message...\n");
@@ -148,7 +169,10 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
 
                         // Client disconnected.
                         // TODO!!!!!!!!!!!!!!: change fd to TCP_id
-                        server_print_connection_status(0, poll_fds[i].fd, 0, 0);
+                        struct TCP_client *TCP_client =
+                            TCP_clients_array_find_client_from_fd(clients, poll_fds[i].fd);
+
+                        server_print_connection_status(0, TCP_client->id, 0, 0);
                         close(poll_fds[i].fd);
 
                         // Remove closed socket from poll.
@@ -159,10 +183,59 @@ void run_server(int UDP_clientfd, int TCP_clientfd)
                     } else {
                         printf("Treat TCP message...\n");
 
-                        TCP_parse_message(received_packet, &TCP_parsed_msg);
+                        // TCP_parse_message(received_packet, &TCP_parsed_msg);
+                        struct TCP_message TCP_msg =
+                            *(struct TCP_message *)received_packet.message;
 
-                        printf("S-a primit de la clientul de pe socketul %d mesajul: %s\n",
-                                     poll_fds[i].fd, received_packet.message);
+                        // printf("S-a primit de la clientul de pe socketul %d mesajul: %s\n",
+                        //              poll_fds[i].fd, received_packet.message);
+                        
+                        // Check if it's a new connection.
+                        if (TCP_msg.sf == 2) {
+                            printf("Get id from new TCP connection...\n");
+
+                            // TCP_clients_array_add_client(clients,
+                            //                             TCP_msg.id,
+                            //                             TCP_clientfd);
+                            
+                            // TCP_clients_array_print(clients);
+
+                            struct TCP_client *TCP_client =
+                                TCP_clients_array_find_client_from_fd(clients,
+                                                                      poll_fds[i].fd);
+                            if (!TCP_client) {
+                                fprintf(stderr, "No client found with file descriptor %d.\n", poll_fds[i].fd);
+                                continue;
+                            }
+
+                            // Don't accept connection of an existing client.
+                            struct TCP_client *existing_client =
+                                TCP_clients_array_find_client_from_id(clients,
+                                                                      TCP_msg.id);
+                            if (existing_client) {
+                                printf("Client exists.\n");
+
+                                printf("Client %s already connected.\n", TCP_client->id);
+                                close(poll_fds[i].fd);
+                                // Remove closed socket from poll.
+                                for (int j = i; j < num_clients - 1; j++) {
+                                    poll_fds[j] = poll_fds[j + 1];
+                                }
+                                num_clients--;
+
+                                continue;
+                            }
+
+                            strcpy(TCP_client->id, TCP_msg.id);
+
+                            TCP_clients_array_print(clients);
+
+                            server_print_connection_status(1,
+                                                           TCP_client->id,
+                                                           TCP_client->ip,
+                                                           TCP_client->port);
+                            continue;
+                        }
                         
                         // Find the topic to subscribe to/unsubscribe from.
                         struct topic *topic =

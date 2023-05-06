@@ -4,18 +4,27 @@
 #include "../util/common.h"
 #include "../util/helpers.h"
 
-struct TCP_client TCP_client_create(char *id, uint32_t fd)
+struct TCP_client TCP_client_create(char *id,
+                                    uint32_t fd,
+                                    char* ip,
+                                    uint16_t port)
 {
     struct TCP_client client;
     strcpy(client.id, id);
     client.fd = fd;
+    strcpy(client.ip, ip);
+    client.port = port;
 
     return client;
 }
 
 void TCP_client_print(struct TCP_client client)
 {
-    printf("TCP client with {ID = %s, file descriptor = %d}.\n", client.id, client.fd);
+    printf("TCP client with {ID = %s, file descriptor = %d, ip address = %s, port = %hu}.\n",
+           client.id,
+           client.fd,
+           client.ip,
+           client.port);
 }
 
 struct TCP_clients *TCP_clients_array_create()
@@ -47,9 +56,11 @@ void TCP_clients_array_print(struct TCP_clients *clients)
 
 void TCP_clients_array_add_client(struct TCP_clients *clients,
                                   char *id,
-                                  uint32_t fd)
+                                  uint32_t fd,
+                                  char *ip,
+                                  uint16_t port)
 {
-    clients->clients[clients->size] = TCP_client_create(id, fd);
+    clients->clients[clients->size] = TCP_client_create(id, fd, ip, port);
     clients->size++;
 }
 
@@ -78,12 +89,26 @@ void TCP_clients_array_remove_client(struct TCP_clients *clients,
     clients->size--;
 }
 
-struct TCP_client *TCP_clients_array_find_client(struct TCP_clients *clients,
-                                                char *id)
+struct TCP_client *TCP_clients_array_find_client_from_id(struct TCP_clients *clients,
+                                                         char *id)
 {
     struct TCP_client *client = NULL;
     for (int i = 0; i < clients->size; i++) {
         if (strcmp(clients->clients[i].id, id) == 0) {
+            client = &clients->clients[i];
+            break;
+        }
+    }
+
+    return client;
+}
+
+struct TCP_client *TCP_clients_array_find_client_from_fd(struct TCP_clients *clients,
+                                                         uint32_t fd)
+{
+    struct TCP_client *client = NULL;
+    for (int i = 0; i < clients->size; i++) {
+        if (clients->clients[i].fd == fd) {
             client = &clients->clients[i];
             break;
         }

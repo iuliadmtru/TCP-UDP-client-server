@@ -18,7 +18,8 @@ int recv_all(int sockfd, void *buffer, size_t len)
         printf("Receive bytes...\n");
 
         ssize_t rc = recv(sockfd, buff + bytes_received, bytes_remaining, 0);
-        DIE(rc == -1, "recv failed\n");
+        DIE(rc == -1, "recv failed");
+
         if (rc == 0)
             return 0;
 
@@ -39,7 +40,7 @@ int send_all(int sockfd, void *buffer, size_t len)
 
     while(bytes_remaining) {
         ssize_t rc = send(sockfd, buff + bytes_sent, bytes_remaining, 0);
-        DIE(rc == -1, "send failed\n");
+        DIE(rc == -1, "send failed");
 
         bytes_sent += rc;
         bytes_remaining -= rc;

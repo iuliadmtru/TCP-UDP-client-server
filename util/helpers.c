@@ -14,15 +14,15 @@ void print_ip_address(uint32_t ip_addr) {
 }
 
 void server_print_connection_status(int connected,
-                                    int id,
+                                    char *id,
                                     char *ip,
                                     uint16_t port)
 {
     if (connected) {
-        printf("New client %d connected from ", id);
+        printf("New client %s connected from ", id);
         printf("%s:%hu.\n", ip, port);
     } else {
-        printf("Client %d disconnected.\n", id);
+        printf("Client %s disconnected.\n", id);
     }
 }
 

@@ -87,8 +87,7 @@ void run_client(int sockfd, char *id)
                 tcp_client_exit(sockfd, poll_fds, num_fds);
             
             // Received message from UDP subscription.
-            struct UDP_message UDP_recv;
-            UDP_msg_from_packet(&UDP_recv, recv_packet);
+            struct UDP_message UDP_recv = *(struct UDP_message *)recv_packet.message;
             UDP_print_subscription_message(UDP_recv);
         } else {
             // Receive messages from UDP subscriptions.
@@ -129,16 +128,21 @@ int main(int argc, char *argv[])
     rc = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "connect failed");
 
-    // // Let the server know the client's ID.
-    // struct packet sent_packet;
-    // snprintf(sent_packet.message,
-    //          sizeof(struct TCP_message),
-    //          "%s %hhu %s %hhu",
-    //          argv[1],
-    //          0,
-    //          0,
-    //          0);
-    // send_all(sockfd, &sent_packet, sizeof(sent_packet));
+    // Let the server know the client's ID.
+    struct TCP_message TCP_msg;
+    strcpy(TCP_msg.id, argv[1]);
+    TCP_msg.sf = 2;
+    TCP_msg.subscribe_status = 0;
+    strcpy(TCP_msg.topic, "");
+
+    struct packet sent_packet;
+    memcpy(sent_packet.message, (char *)&TCP_msg, sizeof(TCP_msg));
+
+    printf("Sending message: %s...\n", sent_packet.message);
+
+    send_all(sockfd, &sent_packet, sizeof(sent_packet));
+
+    printf("Message sent.\n");
 
     run_client(sockfd, argv[1]);
 

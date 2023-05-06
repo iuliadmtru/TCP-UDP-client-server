@@ -25,7 +25,7 @@
  * Messages.
  */
 void server_print_connection_status(int connected,
-                                    int id,
+                                    char *id,
                                     char *ip,
                                     uint16_t port);
 

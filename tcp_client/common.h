@@ -10,6 +10,8 @@
 struct TCP_client {
     char id[10];
     uint32_t fd;
+    char ip[16];
+    uint16_t port;
 };
 
 struct TCP_clients {
@@ -17,7 +19,10 @@ struct TCP_clients {
     int size;
 };
 
-struct TCP_client TCP_client_create(char *id, uint32_t fd);
+struct TCP_client TCP_client_create(char *id,
+                                    uint32_t fd,
+                                    char* ip,
+                                    uint16_t port);
 
 void TCP_client_print(struct TCP_client client);
 
@@ -29,12 +34,17 @@ void TCP_clients_array_print(struct TCP_clients *clients);
 
 void TCP_clients_array_add_client(struct TCP_clients *clients,
                                   char *id,
-                                  uint32_t fd);
+                                  uint32_t fd,
+                                  char *ip,
+                                  uint16_t port);
 
 void TCP_clients_array_remove_client(struct TCP_clients *clients,
                                      char *id);
 
-struct TCP_client *TCP_clients_array_find_client(struct TCP_clients *clients,
-                                                char *id);
+struct TCP_client *TCP_clients_array_find_client_from_id(struct TCP_clients *clients,
+                                                         char *id);
+
+struct TCP_client *TCP_clients_array_find_client_from_fd(struct TCP_clients *clients,
+                                                         uint32_t fd);
 
 #endif

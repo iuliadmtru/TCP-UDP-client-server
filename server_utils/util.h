@@ -7,7 +7,11 @@
 #include <poll.h>
 
 #include "../util/common.h"
+#include "../tcp_client/common.h"
 
-void server_exit(struct pollfd *poll_fds, int num_clients, struct topics *topics);
+void server_exit(struct pollfd *poll_fds,
+                 int num_clients,
+                 struct topics *topics,
+                 struct TCP_clients *clients);
 
 #endif

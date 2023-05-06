@@ -7,8 +7,8 @@ ID_CLIENT = 10
 
 all: server subscriber
 
-server: server.c util/common.c util/helpers.c server_utils/util.c
-	gcc $(CFLAGS) server.c util/common.c util/helpers.c server_utils/util.c -o server $(LIBS)
+server: server.c util/common.c util/helpers.c server_utils/util.c tcp_client/common.c
+	gcc $(CFLAGS) server.c util/common.c util/helpers.c server_utils/util.c tcp_client/common.c -o server $(LIBS)
 
 subscriber:
 	gcc $(CFLAGS) tcp_client/tcp_client.c util/common.c util/helpers.c tcp_client/util.c -o subscriber $(LIBS)
