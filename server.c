@@ -15,10 +15,10 @@
 #define SERVER_IP_ADDR "0.0.0.0"
 #define CMD_MAXLEN 5
 
-enum command {SERVER_CMD_EXIT, SERVER_CMD_UNDEFINED};
-
 
 // ------------------------ PARSE USER INPUT ------------------------
+
+enum command {SERVER_CMD_EXIT, SERVER_CMD_UNDEFINED};
 
 /*
  * Check that the argument number is correct.
@@ -156,12 +156,12 @@ int main(int argc, char *argv[])
     // Initialize sockets.
     struct sockaddr_in serv_addr = server_initialize_sockaddr(port);
     // UDP.
-    int UDP_fd = UDP_server_get_fd(serv_addr);
-    DIE(UDP_fd < 0, "UDP_server_initialize_fd failed");
+    int UDP_fd = UDP_server_initialize_socket(serv_addr);
+    DIE(UDP_fd < 0, "UDP_server_initialize_socket failed");
     struct UDP_server *UDP_server = UDP_server_create(UDP_fd);
     // TCP.
-    int TCP_fd = TCP_server_get_fd(serv_addr);
-    DIE(TCP_fd < 0, "TCP_server_initialize_fd failed");
+    int TCP_fd = TCP_server_initialize_socket(serv_addr);
+    DIE(TCP_fd < 0, "TCP_server_initialize_socket failed");
     struct TCP_server *TCP_server = TCP_server_create(TCP_fd);
 
     // Run server.

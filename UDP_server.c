@@ -22,7 +22,7 @@ void UDP_server_print(struct UDP_server *UDP_server)
     printf("\t\tcontent: %s\n", UDP_server->msg.content);
 }
 
-int UDP_server_get_fd(struct sockaddr_in serv_addr)
+int UDP_server_initialize_socket(struct sockaddr_in serv_addr)
 {
     // Open socket.
     int UDP_fd = socket(AF_INET, SOCK_DGRAM, 0);

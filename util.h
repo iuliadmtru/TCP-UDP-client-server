@@ -21,6 +21,7 @@ enum error_ret_value {FAIL_SOCKET = -1,
                       FAIL_SETSOCKOPT = -2,
                       FAIL_BIND = -3,
                       FAIL_LISTEN = -4,
-                      FAIL_ACCEPT = -5};
+                      FAIL_ACCEPT = -5,
+                      FAIL_CONNECT = -6};
 
 #endif  // _UTIL_H_

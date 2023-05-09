@@ -1,5 +1,6 @@
 CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
-SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c
+SERV_SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c
+CLI_SOURCES = TCP_client.c poller.c
 LIBS =
 
 PORT = 12345
@@ -8,11 +9,11 @@ ID_CLIENT = 10
 
 all: server subscriber
 
-server: $(SOURCES)
-	gcc $(CFLAGS) $(SOURCES) -o server $(LIBS)
+server: $(SERV_SOURCES)
+	gcc $(CFLAGS) $(SERV_SOURCES) -o server $(LIBS)
 
 subscriber:
-	gcc $(CFLAGS) tcp_client/tcp_client.c util/common.c util/helpers.c tcp_client/util.c -o subscriber $(LIBS)
+	gcc $(CFLAGS) $(CLI_SOURCES) -o subscriber $(LIBS)
 
 clients_tests:
 	gcc $(CFLAGS) clients.c clients_tests.c -o clients_tests
@@ -26,6 +27,9 @@ run_server_valgrind:
 
 run_subscriber:
 	./subscriber ${ID_CLIENT} ${IP_SERVER} ${PORT}
+
+run_subscriber_valgrind:
+	valgrind --track-origins=yes ./subscriber ${ID_CLIENT} ${IP_SERVER} ${PORT}
 
 run_udp_client:
 	python3 udp_client_test.py

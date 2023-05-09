@@ -16,7 +16,7 @@ struct TCP_server {
 
 void TCP_server_print(struct TCP_server *TCP_server);
 
-int TCP_server_get_fd(struct sockaddr_in serv_addr);
+int TCP_server_initialize_socket(struct sockaddr_in serv_addr);
 
 struct TCP_server *TCP_server_create(int fd);
 

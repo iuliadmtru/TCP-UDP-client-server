@@ -48,6 +48,7 @@ void poller_add_fd(struct poller *poller, int fd)
 
     printf("Poller after add:\n");
     poller_print(poller);
+    printf("\n");
 }
 
 int poller_find_fd_idx(struct poller *poller, int fd)

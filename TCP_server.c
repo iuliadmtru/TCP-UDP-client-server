@@ -8,6 +8,7 @@
 #include "TCP_server.h"
 #include "packets.h"
 #include "util.h"
+#include "clients.h"
 
 void TCP_server_print(struct TCP_server *TCP_server)
 {
@@ -19,9 +20,12 @@ void TCP_server_print(struct TCP_server *TCP_server)
     printf("\tmessage:\n");
     printf("\t\tmsg_len: %hhu\n", TCP_server->msg.msg_len);
     printf("\t\tmsg: %s\n", TCP_server->msg.msg);
+
+    printf("\tconnected_clients:\n");
+    clients_list_print(TCP_server->connected_clients);
 }
 
-int TCP_server_get_fd(struct sockaddr_in serv_addr)
+int TCP_server_initialize_socket(struct sockaddr_in serv_addr)
 {
     // Open TCP socket.
     int TCP_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -80,6 +84,10 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server)
     client_node *new_client =
         client_node_create(CLIENT_STATE_NEW, cli_fd, "");
     clients_list_add_client(TCP_server->connected_clients, new_client);
+
+    printf("TCP_server after accepting connection:\n");
+    TCP_server_print(TCP_server);
+    printf("\n");
 
     return cli_fd;
 }
