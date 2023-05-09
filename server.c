@@ -8,6 +8,8 @@
 
 #include "util.h"
 #include "poller.h"
+#include "packets.h"
+#include "UDP_server.h"
 
 #define SERVER_IP_ADDR "0.0.0.0"
 #define CMD_MAXLEN 5
@@ -74,7 +76,7 @@ struct sockaddr_in server_initialize_sockaddr(uint16_t port)
 }
 
 /*
- * Initialize UDP client with type = SOCK_DGRAM and TCP client with
+ * Initialize UDP socket with type = SOCK_DGRAM and TCP socket with
  * type = SOCK_STREAM;
  */
 int server_initialize_socket(struct sockaddr_in serv_addr, int type)
@@ -96,7 +98,12 @@ int server_initialize_socket(struct sockaddr_in serv_addr, int type)
 }
 
 
+// ------------------------ UDP ------------------------
+
+
+
 // ------------------------ SERVER FUNCTIONS ------------------------
+
 void server_exit(struct poller *poller)
 {
     poller_destroy(poller);
@@ -107,7 +114,7 @@ void server_exit(struct poller *poller)
 
 // ------------------------ RUN ------------------------
 
-void run_server(int UDP_fd, int TCP_fd)
+void run_server(struct UDP_server *UDP_server, int TCP_fd)
 {
     // Listen for TCP clients.
     int rc = listen(TCP_fd, MAX_CONNECTIONS);
@@ -116,7 +123,7 @@ void run_server(int UDP_fd, int TCP_fd)
     // Initialize poll with STDIN, UDP and TCP file descriptors.
     struct poller *poller = poller_create();
     poller_add_fd(poller, STDIN_FILENO);
-    poller_add_fd(poller, UDP_fd);
+    poller_add_fd(poller, UDP_server->fd);
     poller_add_fd(poller, TCP_fd);
 
     while (1) {
@@ -138,7 +145,9 @@ void run_server(int UDP_fd, int TCP_fd)
                         fprintf(stderr, "Unknown command\n");
                         break;
                 }
-            } else if (fd == UDP_fd) {  // Receive UDP packet.
+            } else if (fd == UDP_server->fd) {  // Receive UDP packet.
+                rc = UDP_server_recv(UDP_server);
+                DIE(rc < 0, "UDP_server_recv failed");
 
             } else if (fd == TCP_fd) {  // Receive new TCP connection.
 
@@ -161,11 +170,15 @@ int main(int argc, char *argv[])
 
     // Initialize sockets.
     struct sockaddr_in serv_addr = server_initialize_sockaddr(port);
-    int UDP_fd = server_initialize_socket(serv_addr, SOCK_DGRAM);
+    // UDP.
+    int UDP_fd = UDP_server_initialize_fd(serv_addr);
+    DIE(UDP_fd < 0, "UDP_server_initialize_fd failed");
+    struct UDP_server *UDP_server = UDP_server_create(UDP_fd);
+    // TCP.
     int TCP_fd = server_initialize_socket(serv_addr, SOCK_STREAM);
 
     // Run server.
-    run_server(UDP_fd, TCP_fd);
+    run_server(UDP_server, TCP_fd);
 
     // Close sockets.
     close(UDP_fd);

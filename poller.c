@@ -7,7 +7,7 @@
 
 void poller_print(struct poller *poller)
 {
-    printf("\nPrint poller with %d file descriptors and iterator index at %d:\n", poller->num_pollfds, poller->idx_iterator);
+    printf("Print poller with %d file descriptors and iterator index at %d:\n", poller->num_pollfds, poller->idx_iterator);
     for (int i = 0; i < poller->num_pollfds; i++) {
         printf("\tpollfd %d: {fd: %d, events: %hu, revents: %hu}\n", i,
                                                                      poller->pollfds[i].fd,
@@ -91,7 +91,7 @@ int poller_next_fd_with_POLLIN(struct poller *poller)
         return -1;
     }
 
-    printf("Poller after finding event at file descriptor %d:\n", poller->pollfds[poller->idx_iterator].fd);
+    printf("\nPoller after finding event at file descriptor %d:\n", poller->pollfds[poller->idx_iterator].fd);
     poller_print(poller);
     
     // Move index to the next entry and return the file descriptor where the

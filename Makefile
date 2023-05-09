@@ -1,4 +1,5 @@
 CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
+SOURCES = server.c poller.c UDP_server.c
 LIBS =
 
 PORT = 12345
@@ -7,8 +8,8 @@ ID_CLIENT = 10
 
 all: server subscriber
 
-server: server.c poller.c
-	gcc $(CFLAGS) server.c poller.c -o server $(LIBS)
+server: $(SOURCES)
+	gcc $(CFLAGS) $(SOURCES) -o server $(LIBS)
 
 subscriber:
 	gcc $(CFLAGS) tcp_client/tcp_client.c util/common.c util/helpers.c tcp_client/util.c -o subscriber $(LIBS)
