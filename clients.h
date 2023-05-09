@@ -2,6 +2,7 @@
 #define _CLIENTS_H_
 
 #include <stdint.h>
+#include <netinet/in.h>
 
 #define ID_MAXLEN 10
 
@@ -11,6 +12,8 @@ typedef struct client_node {
     uint8_t state;  // CLIENT_STATE_NEW || CLIENT_STATE_CONNECTED
     int fd;
     char id[ID_MAXLEN];
+    struct in_addr ip;
+    uint16_t port;
     struct client_node *prev;
     struct client_node *next;
 } client_node;
@@ -23,7 +26,9 @@ void client_node_print(client_node *client, int idx);
 
 client_node *client_node_create(uint8_t state,
                                 int fd,
-                                char *id);
+                                char *id,
+                                struct in_addr ip,
+                                uint16_t port);
 
 void client_node_destroy(client_node *client);
 

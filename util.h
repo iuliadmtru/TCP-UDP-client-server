@@ -1,7 +1,7 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-// #include <stdlib.h>
+#include <stdlib.h>
 
 /*
  * Error-checking macro.
@@ -23,5 +23,9 @@ enum error_ret_value {FAIL_SOCKET = -1,
                       FAIL_LISTEN = -4,
                       FAIL_ACCEPT = -5,
                       FAIL_CONNECT = -6};
+
+int recv_all(int sockfd, void *buffer, size_t len);
+
+int send_all(int sockfd, void *buffer, size_t len);
 
 #endif  // _UTIL_H_

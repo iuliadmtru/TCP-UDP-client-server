@@ -138,6 +138,20 @@ void TCP_client_destroy(struct TCP_client *TCP_client)
     free(TCP_client);
 }
 
+int TCP_client_send(struct TCP_client *TCP_client,
+                    struct TCP_header TCP_msg)
+{
+    struct packet sent_packet;
+    memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
+    int rc = send_all(TCP_client->fd, &sent_packet, sizeof(sent_packet));
+
+    printf("\n\n--------Sent packet of length %ld: %s---------\n\n\n",
+           sizeof(sent_packet),
+           (*(struct TCP_ctos_msg *)TCP_msg.msg).payload);
+
+    return rc;
+}
+
 
 // ------------------------ CLIENT FUNCTIONS ------------------------
 
@@ -147,6 +161,19 @@ void client_exit(struct poller *poller, struct TCP_client *TCP_client)
     TCP_client_destroy(TCP_client);
     // TODO?
     exit(0);
+}
+
+struct TCP_header client_compose_msg(uint8_t type, char *payload)
+{
+    struct TCP_ctos_msg TCP_msg;
+    TCP_msg.msg_type = type;
+    strcpy(TCP_msg.payload, payload);
+
+    struct TCP_header TCP_hdr;
+    TCP_hdr.msg_len = sizeof(struct TCP_ctos_msg);
+    memcpy(TCP_hdr.msg, (char *)&TCP_msg, TCP_hdr.msg_len);
+
+    return TCP_hdr;
 }
 
 
@@ -188,6 +215,9 @@ void run_client(struct TCP_client *TCP_client)
 
 int main(int argc, char *argv[])
 {
+    // Initial configuration.
+    setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+
     // Check and parse arguments.
     if (!check_args(argc, argv))
         return -1;
@@ -200,7 +230,9 @@ int main(int argc, char *argv[])
     struct TCP_client *TCP_client = TCP_client_create(cli_fd);
 
     // Send connection message to provide the client id to the server.
-    // TODO
+    struct TCP_header connection_msg = client_compose_msg(TCP_MSG_NEW, args.id);
+    int rc = TCP_client_send(TCP_client, connection_msg);
+    DIE(rc < 0, "TCP_client_send failed");
 
     // Run server.
     run_client(TCP_client);

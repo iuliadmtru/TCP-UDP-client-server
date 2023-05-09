@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "clients.h"
 
@@ -14,6 +15,8 @@ void client_node_print(client_node *client, int idx)
                                         printf("\tstate: CLIENT_STATE_CONNECTED\n");
     printf("\tfd: %d\n", client->fd);
     printf("\tid: %s\n", client->id);
+    printf("\tip: %s\n", inet_ntoa(client->ip));
+    printf("\tport: %hu\n", client->port);
     client->prev ? printf("\tprev id: %s\n", client->prev->id) :
                    printf("\tno prev\n");
     client->next ? printf("\tnext id: %s\n", client->next->id) :
@@ -22,13 +25,17 @@ void client_node_print(client_node *client, int idx)
 
 client_node *client_node_create(uint8_t state,
                                 int fd,
-                                char *id)
+                                char *id,
+                                struct in_addr ip,
+                                uint16_t port)
 {
     client_node *client = malloc(sizeof(client_node));
 
     client->state = state;
     client->fd = fd;
     strcpy(client->id, id);
+    client->ip = ip;
+    client->port = port;
     client->prev = NULL;
     client->next = NULL;
 
@@ -140,8 +147,12 @@ void clients_list_remove_client_by_fd(clients_list *clients, int fd)
         return;
     }
 
-    removed->next->prev = removed->prev;
-    removed->prev->next = removed->next;
+    if (clients_list_is_head(clients, removed)) {
+        clients->head = clients->head->next;
+    } else {
+        removed->next->prev = removed->prev;
+        removed->prev->next = removed->next;
+    }
     client_node_destroy(removed);
 }
 

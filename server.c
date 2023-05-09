@@ -83,6 +83,8 @@ struct sockaddr_in server_initialize_sockaddr(uint16_t port)
 
 // ------------------------ SERVER FUNCTIONS ------------------------
 
+enum connection_status {CONNECTED, DISCONNECTED};
+
 void server_exit(struct poller *poller,
                  struct UDP_server *UDP_server,
                  struct TCP_server *TCP_server)
@@ -92,6 +94,25 @@ void server_exit(struct poller *poller,
     TCP_server_destroy(TCP_server);
     // TODO
     exit(0);
+}
+
+void server_print_connection_status(struct TCP_server *TCP_server,
+                                    int fd,
+                                    int status)
+{
+    client_node *client =
+        clients_list_find_by_fd(TCP_server->connected_clients, fd);
+    switch (status) {
+        case CONNECTED:
+            printf("New client %s connected from %s:%hu.\n",
+                   client->id,
+                   inet_ntoa(client->ip),
+                   client->port);
+            break;
+        case DISCONNECTED:
+            printf("Client %s disconnected.\n", client->id);
+            break;
+    }
 }
 
 
@@ -136,8 +157,26 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
 
                 // Add the new socket to the poller.
                 poller_add_fd(poller, cli_fd);
+                // Don't consider this client at this iteration.
+                poller_advance(poller);
             } else {  // Receive TCP message.
+                rc = TCP_server_recv_all(TCP_server, fd);
+                DIE(rc == -1, "TCP_server_recv_all failed");
+                if (rc == 0) {  // Client disconnected.
+                    server_print_connection_status(TCP_server,
+                                                   fd,
+                                                   DISCONNECTED);
+                    TCP_server_close_connection(TCP_server, fd);
+                    continue;
+                }
 
+                if (TCP_server_is_new_connection(TCP_server, fd)) {
+                    rc = TCP_server_update_client(TCP_server, fd);
+                    if (rc == -1)  // Client is already connected.
+                        poller_remove_fd(poller, fd);
+                } else {  // Received subscribe/unsubscribe message.
+
+                }
             }
         }
     }
@@ -148,6 +187,9 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
 
 int main(int argc, char *argv[])
 {
+    // Initial configuration.
+    setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+
     // Check and parse arguments.
     if (!check_args(argc, argv))
         return -1;

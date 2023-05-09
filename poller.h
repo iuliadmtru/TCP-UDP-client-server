@@ -31,4 +31,6 @@ void poller_remove_fd(struct poller *poller, int fd);
  */
 int poller_next_fd_with_POLLIN(struct poller *poller);
 
+void poller_advance(struct poller *poller);
+
 #endif  // _POLLER_H_

@@ -10,6 +10,8 @@
 #define TCP_MSG_MAXLEN 1599  // 1551 + 16 + 32
 #define PACKET_MAXLEN 1615  // 1599 + 16
 
+enum TCP_msg_type {TCP_MSG_NEW, TCP_MSG_SUBSCRIBE, TCP_MSG_UNSUBSCRIBE};
+
 struct packet {
     char msg[PACKET_MAXLEN];
 } __attribute__((packed));

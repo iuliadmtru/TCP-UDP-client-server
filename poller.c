@@ -102,3 +102,8 @@ int poller_next_fd_with_POLLIN(struct poller *poller)
 
     return fd;
 }
+
+void poller_advance(struct poller *poller)
+{
+    poller->idx_iterator++;
+}

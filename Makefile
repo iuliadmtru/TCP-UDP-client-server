@@ -1,11 +1,11 @@
 CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
-SERV_SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c
-CLI_SOURCES = TCP_client.c poller.c
+SERV_SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c util.c
+CLI_SOURCES = TCP_client.c poller.c util.c
 LIBS =
 
 PORT = 12345
 IP_SERVER = 127.0.0.1
-ID_CLIENT = 10
+ID_CLIENT = client1
 
 all: server subscriber
 
