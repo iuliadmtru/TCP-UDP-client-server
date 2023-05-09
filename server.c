@@ -174,6 +174,10 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                     rc = TCP_server_update_client(TCP_server, fd);
                     if (rc == -1)  // Client is already connected.
                         poller_remove_fd(poller, fd);
+                    else
+                        server_print_connection_status(TCP_server,
+                                                       fd,
+                                                       CONNECTED);
                 } else {  // Received subscribe/unsubscribe message.
 
                 }

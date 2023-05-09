@@ -9,6 +9,7 @@
 #define UDP_MSG_MAXLEN 1551
 #define TCP_MSG_MAXLEN 1599  // 1551 + 16 + 32
 #define PACKET_MAXLEN 1615  // 1599 + 16
+#define CTOS_MAXLEN 52  // TOPIC_LEN + <space> + <sf>
 
 enum TCP_msg_type {TCP_MSG_NEW, TCP_MSG_SUBSCRIBE, TCP_MSG_UNSUBSCRIBE};
 
@@ -32,7 +33,7 @@ struct TCP_header {
  */
 struct TCP_ctos_msg {
     uint8_t msg_type;  // new || subscribe || unsubscribe
-    char payload[TOPIC_LEN];  // id || topic
+    char payload[CTOS_MAXLEN];  // id || topic
 } __attribute__((packed));
 
 /*

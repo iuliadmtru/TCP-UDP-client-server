@@ -26,6 +26,12 @@ struct args {
     uint16_t server_port;
 };
 
+struct command_args {
+    int cmd;
+    char topic[TOPIC_LEN];
+    uint8_t store_and_forward;
+};
+
 /*
  * Check that the argument number is correct.
  */
@@ -59,16 +65,36 @@ struct args get_args(char *argv[])
 }
 
 /*
- * Parse user command - SERVER_CMD_EXIT or SERVER_CMD_UNDEFINED.
+ * Parse user command: CLIENT_CMD_EXIT, CLIENT_CMD_SUBSCRIBE,
+ * CLIENT_CMD_UNSUBSCRIBE, CLIENT_CMD_UNDEFINED.
  */
-int get_user_command()
+struct command_args get_user_command()
 {
+    struct command_args args;
+
     char cmd[CMD_MAXLEN];
     scanf("%s", cmd);
+    if (strcmp(cmd, "exit") == 0) {
+        args.cmd = CLIENT_CMD_EXIT;
+    } else if (strcmp(cmd, "subscribe") == 0) {
+        char topic[TOPIC_LEN];
+        uint8_t store_and_forward;
+        scanf("%s %hhu", topic, &store_and_forward);
 
-    if (strcmp(cmd, "exit") == 0)
-        return CLIENT_CMD_EXIT;
-    return CLIENT_CMD_UNDEFINED;
+        strcpy(args.topic, topic);
+        args.store_and_forward = store_and_forward;
+        args.cmd = CLIENT_CMD_SUBSCRIBE;
+    } else if (strcmp(cmd, "unsubscribe") == 0) {
+        char topic[TOPIC_LEN];
+        scanf("%s", topic);
+
+        strcpy(args.topic, topic);
+        args.cmd = CLIENT_CMD_UNSUBSCRIBE;
+    } else {
+        args.cmd = CLIENT_CMD_UNDEFINED;
+    }
+
+    return args;
 }
 
 
@@ -116,17 +142,18 @@ int client_initialize_socket(struct sockaddr_in cli_addr)
 
 struct TCP_client {
     int fd;
+    char id[ID_MAXLEN];
     struct sockaddr_in cli_addr;
     socklen_t cli_addr_len;
     struct packet recv_packet;
-    struct TCP_ctos_msg sent_msg;
 };
 
-struct TCP_client *TCP_client_create(int fd)
+struct TCP_client *TCP_client_create(int fd, char *id)
 {
     struct TCP_client *TCP_client = malloc(sizeof(struct TCP_client));
 
     TCP_client->fd = fd;
+    strcpy(TCP_client->id, id);
     TCP_client->cli_addr_len = sizeof(struct sockaddr_in);
 
     return TCP_client;
@@ -145,10 +172,17 @@ int TCP_client_send(struct TCP_client *TCP_client,
     memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
     int rc = send_all(TCP_client->fd, &sent_packet, sizeof(sent_packet));
 
-    printf("\n\n--------Sent packet of length %ld: %s---------\n\n\n",
-           sizeof(sent_packet),
-           (*(struct TCP_ctos_msg *)TCP_msg.msg).payload);
+    return rc;
+}
 
+int TCP_client_recv(struct TCP_client *TCP_client)
+{
+    int rc = recv_all(TCP_client->fd, &TCP_client->recv_packet, sizeof(TCP_client->recv_packet));
+    if (rc < 0)
+        return -1;
+    if (rc == 0)  // Connection ended.
+        return 0;
+    
     return rc;
 }
 
@@ -196,17 +230,45 @@ void run_client(struct TCP_client *TCP_client)
             if (fd == -1) {
                 break;
             } else if (fd == STDIN_FILENO) {  // Receive STDIN command.
-                int cmd = get_user_command();
-                switch (cmd) {
+                struct command_args args = get_user_command();
+                switch (args.cmd) {
                     case CLIENT_CMD_EXIT:
                         client_exit(poller, TCP_client);
+                        break;
+                    case CLIENT_CMD_SUBSCRIBE:
+                        // Construct payload as the string "<TOPIC> <SF>".
+                        char payload[CTOS_MAXLEN];
+                        strncat(payload, args.topic, TOPIC_LEN);
+                        args.store_and_forward ? strncat(payload, " 1", 3) :
+                                                 strncat(payload, " 0", 3);
+
+                        // Compose and send subscribe message.
+                        struct TCP_header subscribe_msg =
+                            client_compose_msg(TCP_MSG_SUBSCRIBE, payload);
+                        int rc = TCP_client_send(TCP_client, subscribe_msg);
+                        DIE(rc < 0, "TCP_client_send failed");
+
+                        break;
+                    case CLIENT_CMD_UNSUBSCRIBE:
+                        // Compose and send unsubscribe message.
+                        struct TCP_header unsubscribe_msg =
+                            client_compose_msg(TCP_MSG_SUBSCRIBE, args.topic);
+                        rc = TCP_client_send(TCP_client, unsubscribe_msg);
+                        DIE(rc < 0, "TCP_client_send failed");
+
                         break;
                     case CLIENT_CMD_UNDEFINED:
                         fprintf(stderr, "Unknown command\n");
                         break;
                 }
             } else {  // Receive packet.
+                int rc = TCP_client_recv(TCP_client);
+                DIE(rc == -1, "TCP_client_recv failed");
 
+                if (rc == 0)  // Connection ended.
+                    client_exit(poller, TCP_client);
+
+                // TODO: treat UDP subscription message
             }
         }
     }
@@ -227,7 +289,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in cli_addr = client_initialize_sockaddr(args);
     int cli_fd = client_initialize_socket(cli_addr);
     DIE(cli_fd < 0, "client_connect_to_server_initialize_fd failed");
-    struct TCP_client *TCP_client = TCP_client_create(cli_fd);
+    struct TCP_client *TCP_client = TCP_client_create(cli_fd, args.id);
 
     // Send connection message to provide the client id to the server.
     struct TCP_header connection_msg = client_compose_msg(TCP_MSG_NEW, args.id);
