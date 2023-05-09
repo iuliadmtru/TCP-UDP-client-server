@@ -5,21 +5,23 @@
 
 #define ID_MAXLEN 10
 
+enum client_state {CLIENT_STATE_NEW, CLIENT_STATE_CONNECTED};
+
 typedef struct clients_list {
     client_node *head;
 } clients_list;
 
 typedef struct client_node {
     uint8_t state;  // CLIENT_STATE_NEW || CLIENT_STATE_CONNECTED
-    uint32_t sockfd;
+    int sockfd;
     char id[ID_MAXLEN];
     client_node *prev;
     client_node *next;
 } client_node;
 
-client_node *client_node_create(uint32_t sockfd,
-                                char *id,
-                                client_node *prev);
+client_node *client_node_create(uint8_t state,
+                                int sockfd,
+                                char *id);
 
 void client_node_destroy(client_node *client);
 
@@ -33,6 +35,8 @@ void clients_list_remove_client(clients_list *clients, client_node *client);
 
 client_node *clients_list_find_by_id(clients_list *clients, char *id);
 
-client_node *clients_list_find_by_fd(clients_list *clients, uint32_t fd);
+client_node *clients_list_find_by_fd(clients_list *clients, int fd);
+
+void clients_list_update_client_by_fd(clients_list *clients, int fd);
 
 #endif  // _CLIENTS_H

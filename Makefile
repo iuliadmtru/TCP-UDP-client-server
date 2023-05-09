@@ -1,5 +1,5 @@
 CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
-SOURCES = server.c poller.c UDP_server.c
+SOURCES = server.c poller.c UDP_server.c TCP_server.c
 LIBS =
 
 PORT = 12345

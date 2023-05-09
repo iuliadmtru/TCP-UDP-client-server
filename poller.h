@@ -5,8 +5,6 @@
 
 #include "util.h"
 
-#define MAX_CONNECTIONS 1000
-
 struct poller {
     struct pollfd pollfds[MAX_CONNECTIONS];
     int num_pollfds;

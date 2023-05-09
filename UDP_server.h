@@ -14,11 +14,11 @@ struct UDP_server {
 
 void UDP_server_print(struct UDP_server *UDP_server);
 
+int UDP_server_get_fd(struct sockaddr_in serv_addr);
+
 struct UDP_server *UDP_server_create(int fd);
 
 void UDP_server_destroy(struct UDP_server *UDP_server);
-
-int UDP_server_initialize_fd(struct sockaddr_in serv_addr);
 
 int UDP_server_recv(struct UDP_server *UDP_server);
 

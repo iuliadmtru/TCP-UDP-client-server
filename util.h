@@ -15,10 +15,12 @@
         }                                                                      \
     } while (0)
 ;
+#define MAX_CONNECTIONS 1000
 
 enum error_ret_value {FAIL_SOCKET = -1,
                       FAIL_SETSOCKOPT = -2,
                       FAIL_BIND = -3,
-                      FAIL_LISTEN = -4};
+                      FAIL_LISTEN = -4,
+                      FAIL_ACCEPT = -5};
 
 #endif  // _UTIL_H_

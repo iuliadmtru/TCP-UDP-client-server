@@ -6,8 +6,9 @@
 
 #define TOPIC_LEN 50
 #define CONTENT_MAXLEN 1500
-#define MSG_MAXLEN 1551
-#define PACKET_MAXLEN 1583  // 1551 + 32 -> sizeof TCP_header
+#define UDP_MSG_MAXLEN 1551
+#define TCP_MSG_MAXLEN 1599  // 1551 + 16 + 32
+#define PACKET_MAXLEN 1615  // 1599 + 16
 
 struct packet {
     char msg[PACKET_MAXLEN];
@@ -20,15 +21,14 @@ struct UDP_msg {
 } __attribute__((packed));
 
 struct TCP_header {
-    uint32_t msg_len;
-    char msg[MSG_MAXLEN];
+    uint16_t msg_len;
+    char msg[TCP_MSG_MAXLEN];  // TCP_ctos_msg || TCP_stoc_msg
 } __attribute__((packed));
 
 /*
  * Client to server message.
  */
 struct TCP_ctos_msg {
-    struct TCP_header hdr;
     uint8_t msg_type;  // new || subscribe || unsubscribe
     char payload[TOPIC_LEN];  // id || topic
 } __attribute__((packed));
@@ -37,7 +37,6 @@ struct TCP_ctos_msg {
  * Server to client message.
  */
 struct TCP_stoc_msg {
-    struct TCP_header hdr;
     struct in_addr src_ip;
     uint16_t src_port;
     struct UDP_msg content;
