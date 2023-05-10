@@ -38,6 +38,9 @@ run_clients_tests:
 	valgrind --track-origins=yes ./clients_tests
 
 
+archive:
+	zip Tema2_IuliaDumitru_321CA.zip Makefile readme* *.c *.h
+
 .PHONY: clean
 clean:
 	rm server subscriber
