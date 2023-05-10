@@ -111,11 +111,16 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server)
 
 int TCP_server_recv(struct TCP_server *TCP_server, int fd)
 {
+    printf("Receive packet on file descriptor %d...\n", fd);
+
     // Receive packet.
     struct packet recv_packet;
     int rc = recv_all(fd,
                       &recv_packet,
                       sizeof(recv_packet));
+
+    printf("Received %d bytes\n", rc);
+
     if (rc < 0)
         return -1;
     if (rc == 0)  // Connection ended.
@@ -123,6 +128,9 @@ int TCP_server_recv(struct TCP_server *TCP_server, int fd)
 
     // Check if `recv_all` finished reading the message length.
     TCP_server->bytes_read += rc;
+
+    printf("bytes_read: %d\n", TCP_server->bytes_read);
+
     if (TCP_server->bytes_read < 2)
         return -2;
 
@@ -135,6 +143,76 @@ int TCP_server_recv(struct TCP_server *TCP_server, int fd)
     // Copy the packet inside the TCP server as a TCP header.
     memcpy(&TCP_server->recv_msg, TCP_hdr->msg, msg_len_total);
 
+    printf("TCP_server after recv:\n");
+    TCP_server_print(TCP_server);
+    printf("\n");
+
+    return 1;
+}
+
+int TCP_server_recv_all(struct TCP_server *TCP_server, int fd)
+{
+    struct packet recv_packet;
+    memset(&recv_packet, 0, sizeof(struct packet));
+
+    // printf("Receive packet on file descriptor %d...\n", fd);
+
+    // Receive packet.
+    int rc = recv(fd, &recv_packet, sizeof(recv_packet), MSG_WAITALL);
+
+    // printf("Received %d bytes out of %ld, message: %hu\n", rc, sizeof(TCP_hdr.msg_len), *(uint16_t *)recv_packet.msg);
+
+    if (rc < 0)
+        return -1;
+    if (rc == 0)  // Connection ended.
+        return 0;
+
+    struct TCP_header TCP_hdr = *(struct TCP_header *)recv_packet.msg;
+    memcpy(&TCP_server->recv_msg, (struct TCP_ctos_msg *)&TCP_hdr.msg, TCP_hdr.msg_len);
+
+    return 1;
+}
+
+int TCP_server_recv_all1(struct TCP_server *TCP_server, int fd)
+{
+    struct TCP_header TCP_hdr;
+    struct packet recv_packet;
+    memset(&recv_packet, 0, sizeof(struct packet));
+
+    printf("Receive packet on file descriptor %d...\n", fd);
+
+    // Receive packet length.
+    int rc = recv(fd, &recv_packet, sizeof(TCP_hdr.msg_len), MSG_WAITALL);
+
+    printf("Received %d bytes out of %ld, message: %hu\n", rc, sizeof(TCP_hdr.msg_len), *(uint16_t *)recv_packet.msg);
+
+    if (rc < 0)
+        return -1;
+    if (rc == 0)  // Connection ended.
+        return 0;
+
+    // Parse the message length.
+    uint16_t msg_len;
+    sscanf(recv_packet.msg, "%hu", &msg_len);
+
+    TCP_hdr = *(struct TCP_header *)recv_packet.msg;
+
+    // Receive entire packet.
+    rc = recv(fd, &recv_packet + sizeof(TCP_hdr.msg_len), TCP_hdr.msg_len, MSG_WAITALL);
+    if (rc < 0)
+        return -1;
+
+    printf("Received %d more bytes out of %hu, message:\n", rc, TCP_hdr.msg_len);
+    TCP_hdr = *(struct TCP_header *)recv_packet.msg;
+    struct TCP_ctos_msg TCP_msg = *(struct TCP_ctos_msg *)TCP_hdr.msg;
+    TCP_ctos_msg_print(TCP_msg);
+    
+    // Copy the packet inside the TCP server as a TCP CTOS message.
+    int msg_len_total = TCP_hdr.msg_len + sizeof(TCP_hdr.msg_len);
+    memcpy(&TCP_server->recv_msg,
+           &TCP_msg,
+           TCP_hdr.msg_len);
+
     // printf("TCP_server after recv:\n");
     // TCP_server_print(TCP_server);
     // printf("\n");
@@ -142,7 +220,7 @@ int TCP_server_recv(struct TCP_server *TCP_server, int fd)
     return 1;
 }
 
-int TCP_server_recv_all(struct TCP_server *TCP_server, int fd)
+int TCP_server_recv_all2(struct TCP_server *TCP_server, int fd)
 {
     int rc = -2;
     while (rc == -2) {

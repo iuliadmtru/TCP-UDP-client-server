@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <poll.h>
+#include <string.h>
 
 #include "poller.h"
 
@@ -19,6 +20,7 @@ void poller_print(struct poller *poller)
 struct poller *poller_create()
 {
     struct poller *poller = malloc(sizeof(struct poller));
+    memset(poller->pollfds, 0, sizeof(poller->pollfds));
     poller->num_pollfds = 0;
     poller->idx_iterator = 0;
     return poller;

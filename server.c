@@ -126,13 +126,20 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
     poller_add_fd(poller, UDP_server->fd);
     poller_add_fd(poller, TCP_server->fd);
 
+    // int debug = 0;
     while (1) {
+        // if (debug > 20) {
+        //     printf("[DEBUG] Too many loops!\n");
+        //     break;
+        // }
+        // debug++;
+
         int rc = poller_poll(poller);
         DIE(rc < 0, "poll failed");
 
         // Iterate through file descriptors where an event happened.
         while (1) {
-            printf("\nEntered server loop...\n");
+            // printf("\nEntered server loop...\n");
 
             int fd = poller_next_fd_with_POLLIN(poller);
             if (fd == -1) {
@@ -162,6 +169,8 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                 // Don't consider this client at this iteration.
                 poller_advance(poller);
             } else {  // Receive TCP message.
+                // printf("Receive TCP message...\n");
+
                 rc = TCP_server_recv_all(TCP_server, fd);
                 DIE(rc == -1, "TCP_server_recv_all failed");
                 if (rc == 0) {  // Client disconnected.
@@ -173,7 +182,7 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                 }
 
                 if (TCP_server_is_new_connection(TCP_server, fd)) {
-                    printf("Treat new connection\n");
+                    // printf("Treat new connection\n");
 
                     rc = TCP_server_update_client(TCP_server, fd);
                     if (rc == -1)  // Client is already connected.
@@ -185,12 +194,12 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                 } else {  // Received subscribe/unsubscribe message.
                     switch (TCP_server->recv_msg.msg_type) {
                         case TCP_MSG_SUBSCRIBE:
-                            printf("Treat subscribe message\n");
+                            // printf("Treat subscribe message\n");
 
                             TCP_server_subscribe(TCP_server, fd);
                             break;
                         case TCP_MSG_UNSUBSCRIBE:
-                            printf("Treat unsubscribe message\n");
+                            // printf("Treat unsubscribe message\n");
 
                             TCP_server_unsubscribe(TCP_server, fd);
                             break;

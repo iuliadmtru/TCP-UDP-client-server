@@ -107,6 +107,7 @@ int vread(char *fmt, ...)
 struct command_args get_user_command()
 {
     struct command_args args;
+    memset(&args, 0, sizeof(args));
 
     char cmd[CMD_MAXLEN];
     int rc = scanf("%s", cmd);
@@ -211,11 +212,14 @@ int TCP_client_send(struct TCP_client *TCP_client,
                     struct TCP_header TCP_msg)
 {
     struct packet sent_packet;
+    memset(&sent_packet, 0, sizeof(sent_packet));
+
     memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
-    int rc = send_all(TCP_client->fd, &sent_packet, TCP_msg.msg_len);
+    int rc = send_all(TCP_client->fd, &sent_packet, sizeof(sent_packet));
 
     printf("Sent message:\n");
     TCP_header_print(*(struct TCP_header *)sent_packet.msg, TCP_CTOS_MSG);
+    printf("---First two bytes: %hu\n", *(uint16_t *)sent_packet.msg);
 
     return rc;
 }
@@ -242,20 +246,34 @@ void client_exit(struct poller *poller, struct TCP_client *TCP_client)
     exit(0);
 }
 
+void client_set_payload(char *payload, struct command_args args)
+{
+    memset(payload, 0, CTOS_MAXLEN);
+    strcat(payload, args.topic);
+    args.store_and_forward ? strcat(payload, " 1") :
+                                strcat(payload, " 0");
+}
+
 struct TCP_header client_compose_msg(uint8_t type, char *payload)
 {
     struct TCP_ctos_msg TCP_msg;
-    TCP_msg.msg_type = type;
+    memset(&TCP_msg, 0, sizeof(TCP_msg));
+
+    memcpy(&TCP_msg.msg_type, &type, sizeof(type));
     strcpy(TCP_msg.payload, payload);
 
     printf("payload: %s\n", payload);
 
     struct TCP_header TCP_hdr;
-    TCP_hdr.msg_len = sizeof(struct TCP_ctos_msg);
-    memcpy(TCP_hdr.msg, (char *)&TCP_msg, TCP_hdr.msg_len);
+    memset(&TCP_hdr, 0, sizeof(TCP_hdr));
+
+    uint16_t msg_len = sizeof(struct TCP_ctos_msg);
+    memcpy(&TCP_hdr.msg_len, &msg_len, sizeof(msg_len));
+    memcpy(TCP_hdr.msg, &TCP_msg, msg_len);
 
     printf("Composed message:\n");
-    TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
+    // TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
+    TCP_ctos_msg_print(*(struct TCP_ctos_msg *)TCP_hdr.msg);
 
     return TCP_hdr;
 }
@@ -288,10 +306,7 @@ void run_client(struct TCP_client *TCP_client)
                     case CLIENT_CMD_SUBSCRIBE:
                         // Construct payload as the string "<TOPIC> <SF>".
                         char payload[CTOS_MAXLEN];
-                        memset(payload, 0, CTOS_MAXLEN);
-                        strcat(payload, args.topic);
-                        args.store_and_forward ? strcat(payload, " 1") :
-                                                 strcat(payload, " 0");
+                        client_set_payload(payload, args);
 
                         // Compose and send subscribe message.
                         struct TCP_header subscribe_msg =

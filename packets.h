@@ -16,6 +16,7 @@ enum TCP_msg_type {TCP_MSG_NEW, TCP_MSG_SUBSCRIBE, TCP_MSG_UNSUBSCRIBE};
 struct packet {
     char msg[PACKET_MAXLEN];
 } __attribute__((packed));
+// };
 
 struct UDP_msg {
     char topic[TOPIC_LEN];
@@ -27,6 +28,7 @@ struct TCP_header {
     uint16_t msg_len;
     char msg[TCP_MSG_MAXLEN];  // TCP_ctos_msg || TCP_stoc_msg
 } __attribute__((packed));
+// };
 
 /*
  * Client to server message.
@@ -35,6 +37,7 @@ struct TCP_ctos_msg {
     uint8_t msg_type;  // new || subscribe || unsubscribe
     char payload[CTOS_MAXLEN];  // id || topic + sf
 } __attribute__((packed));
+// };
 
 /*
  * Server to client message.
