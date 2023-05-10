@@ -147,13 +147,7 @@ void clients_list_remove_client_by_fd(clients_list *clients, int fd)
         return;
     }
 
-    if (clients_list_is_head(clients, removed)) {
-        clients->head = clients->head->next;
-    } else {
-        removed->next->prev = removed->prev;
-        removed->prev->next = removed->next;
-    }
-    client_node_destroy(removed);
+    clients_list_remove_client(clients, removed);
 }
 
 client_node *clients_list_find_by_id(clients_list *clients, char *id)

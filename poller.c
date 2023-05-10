@@ -38,6 +38,10 @@ int poller_poll(struct poller *poller)
 {
     poller->idx_iterator = 0;
     int rc = poll(poller->pollfds, poller->num_pollfds, -1);
+
+    // printf("Poller after poll:\n");
+    // poller_print(poller);
+
     return rc < 0 ? -1 : 0;
 }
 
@@ -77,6 +81,10 @@ void poller_remove_fd(struct poller *poller, int fd)
         poller->pollfds[i] = poller->pollfds[i + 1];
     }
     poller->num_pollfds--;
+
+    // printf("Poller after removing file descriptor %d:\n", fd);
+    // poller_print(poller);
+    // printf("\n");
 }
 
 int poller_next_fd_with_POLLIN(struct poller *poller)
@@ -85,10 +93,10 @@ int poller_next_fd_with_POLLIN(struct poller *poller)
     
     // Search for the next event.
     while (poller->idx_iterator < poller->num_pollfds &&
-           poller->pollfds[poller->idx_iterator].revents != POLLIN)
+           !(poller->pollfds[poller->idx_iterator].revents & POLLIN))
         poller->idx_iterator++;
 
-    if (poller->idx_iterator == poller->num_pollfds) {  // No event.
+    if (poller->idx_iterator >= poller->num_pollfds) {  // No event.
         // printf("No event\n");
 
         return -1;

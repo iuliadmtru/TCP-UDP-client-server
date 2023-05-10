@@ -6,6 +6,7 @@
 #include "packets.h"
 #include "clients.h"
 #include "subscriptions.h"
+#include "poller.h"
 
 struct TCP_server {
     int fd;
@@ -29,7 +30,9 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server);
 
 int TCP_server_recv_all(struct TCP_server *TCP_server, int fd);
 
-void TCP_server_close_connection(struct TCP_server *TCP_server, int fd);
+void TCP_server_close_connection(struct TCP_server *TCP_server,
+                                 struct poller *poller,
+                                 int fd);
 
 int TCP_server_is_new_connection(struct TCP_server *TCP_server, int fd);
 

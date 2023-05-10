@@ -40,4 +40,4 @@ run_clients_tests:
 
 .PHONY: clean
 clean:
-	rm server subscriber clients_tests
+	rm server subscriber

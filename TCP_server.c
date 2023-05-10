@@ -10,6 +10,7 @@
 #include "util.h"
 #include "clients.h"
 #include "subscriptions.h"
+#include "poller.h"
 
 void TCP_server_print(struct TCP_server *TCP_server)
 {
@@ -208,7 +209,7 @@ int TCP_server_recv_all1(struct TCP_server *TCP_server, int fd)
     TCP_ctos_msg_print(TCP_msg);
     
     // Copy the packet inside the TCP server as a TCP CTOS message.
-    int msg_len_total = TCP_hdr.msg_len + sizeof(TCP_hdr.msg_len);
+    // int msg_len_total = TCP_hdr.msg_len + sizeof(TCP_hdr.msg_len);
     memcpy(&TCP_server->recv_msg,
            &TCP_msg,
            TCP_hdr.msg_len);
@@ -236,9 +237,18 @@ int TCP_server_recv_all2(struct TCP_server *TCP_server, int fd)
     return rc;
 }
 
-void TCP_server_close_connection(struct TCP_server *TCP_server, int fd)
+void TCP_server_close_connection(struct TCP_server *TCP_server,
+                                 struct poller *poller,
+                                 int fd)
 {
+    // printf("TCP server closing connection with file descriptor %d\n", fd);
+
     clients_list_remove_client_by_fd(TCP_server->connected_clients, fd);
+    poller_remove_fd(poller, fd);
+
+    // printf("TCP server after closing connection:\n");
+    // TCP_server_print(TCP_server);
+    // printf("\n");
 }
 
 int TCP_server_is_new_connection(struct TCP_server *TCP_server, int fd)

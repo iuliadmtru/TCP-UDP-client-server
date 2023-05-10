@@ -217,9 +217,8 @@ int TCP_client_send(struct TCP_client *TCP_client,
     memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
     int rc = send_all(TCP_client->fd, &sent_packet, sizeof(sent_packet));
 
-    printf("Sent message:\n");
-    TCP_header_print(*(struct TCP_header *)sent_packet.msg, TCP_CTOS_MSG);
-    printf("---First two bytes: %hu\n", *(uint16_t *)sent_packet.msg);
+    // printf("Sent message:\n");
+    // TCP_header_print(*(struct TCP_header *)sent_packet.msg, TCP_CTOS_MSG);
 
     return rc;
 }
@@ -258,24 +257,34 @@ struct TCP_header client_compose_msg(uint8_t type, char *payload)
 {
     struct TCP_ctos_msg TCP_msg;
     memset(&TCP_msg, 0, sizeof(TCP_msg));
-
     memcpy(&TCP_msg.msg_type, &type, sizeof(type));
     strcpy(TCP_msg.payload, payload);
 
-    printf("payload: %s\n", payload);
-
     struct TCP_header TCP_hdr;
     memset(&TCP_hdr, 0, sizeof(TCP_hdr));
-
     uint16_t msg_len = sizeof(struct TCP_ctos_msg);
     memcpy(&TCP_hdr.msg_len, &msg_len, sizeof(msg_len));
     memcpy(TCP_hdr.msg, &TCP_msg, msg_len);
 
-    printf("Composed message:\n");
-    // TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
-    TCP_ctos_msg_print(*(struct TCP_ctos_msg *)TCP_hdr.msg);
+    // printf("Composed message:\n");
+    // // TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
+    // TCP_ctos_msg_print(*(struct TCP_ctos_msg *)TCP_hdr.msg);
 
     return TCP_hdr;
+}
+
+enum subscribe_state {SUBSCRIBE, UNSUBSCRIBE};
+
+void client_print_subscribe_state(int state)
+{
+    switch (state) {
+        case SUBSCRIBE:
+            printf("Subscribed to topic.\n");
+            break;
+        case UNSUBSCRIBE:
+            printf("Unsubscribed from topic.\n");
+            break;
+    }
 }
 
 
@@ -314,6 +323,8 @@ void run_client(struct TCP_client *TCP_client)
                         int rc = TCP_client_send(TCP_client, subscribe_msg);
                         DIE(rc < 0, "TCP_client_send failed");
 
+                        client_print_subscribe_state(SUBSCRIBE);
+
                         break;
                     case CLIENT_CMD_UNSUBSCRIBE:
                         // Compose and send unsubscribe message.
@@ -322,17 +333,25 @@ void run_client(struct TCP_client *TCP_client)
                         rc = TCP_client_send(TCP_client, unsubscribe_msg);
                         DIE(rc < 0, "TCP_client_send failed");
 
+                        client_print_subscribe_state(UNSUBSCRIBE);
+
                         break;
                     case CLIENT_CMD_UNDEFINED:
                         fprintf(stderr, "Unknown command\n");
                         break;
                 }
             } else {  // Receive packet.
+                // printf("Receive packet from server...\n");
+
                 int rc = TCP_client_recv(TCP_client);
                 DIE(rc == -1, "TCP_client_recv failed");
 
-                if (rc == 0)  // Connection ended.
+                // printf("rc = %d\n", rc);
+
+                if (rc == 0) {  // Connection ended.
+                    // printf("Connection ended, closing client...\n");
                     client_exit(poller, TCP_client);
+                }
 
                 // TODO: treat UDP subscription message
             }

@@ -177,7 +177,7 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                     server_print_connection_status(TCP_server,
                                                    fd,
                                                    DISCONNECTED);
-                    TCP_server_close_connection(TCP_server, fd);
+                    TCP_server_close_connection(TCP_server, poller, fd);
                     continue;
                 }
 
@@ -185,9 +185,13 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                     // printf("Treat new connection\n");
 
                     rc = TCP_server_update_client(TCP_server, fd);
-                    if (rc == -1)  // Client is already connected.
-                        poller_remove_fd(poller, fd);
-                    else
+                    if (rc == -1) {  // Client is already connected.
+                        TCP_server_close_connection(TCP_server, poller, fd);
+
+                        printf("TCP server after removing file descriptor:\n");
+                        TCP_server_print(TCP_server);
+                        printf("\n");
+                    } else
                         server_print_connection_status(TCP_server,
                                                        fd,
                                                        CONNECTED);
