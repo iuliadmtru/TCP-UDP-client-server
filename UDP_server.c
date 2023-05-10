@@ -77,8 +77,8 @@ int UDP_server_recv(struct UDP_server *UDP_server)
     struct UDP_msg *msg = (struct UDP_msg *)recv_packet.msg;
     memcpy(&UDP_server->msg, msg, sizeof(struct UDP_msg));
 
-    printf("\nUDP_server after recvfrom:\n");
-    UDP_server_print(UDP_server);
+    // printf("\nUDP_server after recvfrom:\n");
+    // UDP_server_print(UDP_server);
 
     return 0;
 }

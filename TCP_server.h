@@ -30,6 +30,10 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server);
 
 int TCP_server_recv_all(struct TCP_server *TCP_server, int fd);
 
+int TCP_server_send(struct TCP_server *TCP_server,
+                    int fd,
+                    struct TCP_header TCP_msg);
+
 void TCP_server_close_connection(struct TCP_server *TCP_server,
                                  struct poller *poller,
                                  int fd);
@@ -41,5 +45,8 @@ int TCP_server_update_client(struct TCP_server *TCP_server, int fd);
 void TCP_server_subscribe(struct TCP_server *TCP_server, int fd);
 
 void TCP_server_unsubscribe(struct TCP_server *TCP_server, int fd);
+
+int TCP_server_send_to_subscribers(struct TCP_server *TCP_server,
+                                   struct TCP_header TCP_msg);
 
 #endif  // _TCP_SERV_H_

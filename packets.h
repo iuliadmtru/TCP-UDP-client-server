@@ -12,6 +12,11 @@
 #define CTOS_MAXLEN 52  // TOPIC_LEN + <space> + <sf>
 
 enum TCP_msg_type {TCP_MSG_NEW, TCP_MSG_SUBSCRIBE, TCP_MSG_UNSUBSCRIBE};
+enum UDP_msg_data_type {DATA_TYPE_INT,
+                        DATA_TYPE_SHORT_REAL,
+                        DATA_TYPE_FLOAT,
+                        DATA_TYPE_STRING,
+                        DATA_TYPE_INVALID};
 
 struct packet {
     char msg[PACKET_MAXLEN];

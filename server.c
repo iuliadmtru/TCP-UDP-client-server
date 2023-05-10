@@ -115,6 +115,31 @@ void server_print_connection_status(struct TCP_server *TCP_server,
     }
 }
 
+struct TCP_header server_compose_msg(struct UDP_server *UDP_server)
+{
+    struct in_addr ip = UDP_server->serv_addr.sin_addr;
+    uint16_t port = UDP_server->serv_addr.sin_port;
+    struct UDP_msg content = UDP_server->msg;
+
+    struct TCP_stoc_msg TCP_msg;
+    memset(&TCP_msg, 0, sizeof(TCP_msg));
+    memcpy(&TCP_msg.src_ip, &ip, sizeof(ip));
+    memcpy(&TCP_msg.src_port, &port, sizeof(port));
+    memcpy(&TCP_msg.content, &content, sizeof(content));
+
+    struct TCP_header TCP_hdr;
+    memset(&TCP_hdr, 0, sizeof(TCP_hdr));
+    uint16_t msg_len = sizeof(struct TCP_stoc_msg);
+    memcpy(&TCP_hdr.msg_len, &msg_len, sizeof(msg_len));
+    memcpy(TCP_hdr.msg, &TCP_msg, msg_len);
+
+    // printf("Composed message:\n");
+    // // TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
+    // TCP_ctos_msg_print(*(struct TCP_ctos_msg *)TCP_hdr.msg);
+
+    return TCP_hdr;
+}
+
 
 // ------------------------ RUN ------------------------
 
@@ -158,8 +183,13 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                 rc = UDP_server_recv(UDP_server);
                 DIE(rc < 0, "UDP_server_recv failed");
 
-                // Send the packet to all the topic's subscribers.
+                // Compose the subscription message.
+                struct TCP_header TCP_msg = server_compose_msg(UDP_server);
 
+                // Send the message to all the topic's subscribers.
+                // TODO: SF
+                rc = TCP_server_send_to_subscribers(TCP_server, TCP_msg);
+                DIE(rc < 0, "TCP_server_send_to_subscribers failed");
             } else if (fd == TCP_server->fd) {  // Receive new TCP connection.
                 int cli_fd = TCP_server_accept_connection(TCP_server);
                 DIE(cli_fd < 0, "TCP_server_accept_connection failed");
@@ -188,9 +218,9 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                     if (rc == -1) {  // Client is already connected.
                         TCP_server_close_connection(TCP_server, poller, fd);
 
-                        printf("TCP server after removing file descriptor:\n");
-                        TCP_server_print(TCP_server);
-                        printf("\n");
+                        // printf("TCP server after removing file descriptor:\n");
+                        // TCP_server_print(TCP_server);
+                        // printf("\n");
                     } else
                         server_print_connection_status(TCP_server,
                                                        fd,

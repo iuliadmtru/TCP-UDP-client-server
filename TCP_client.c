@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
+#include <math.h>
 
 #include "poller.h"
 #include "packets.h"
@@ -134,8 +135,8 @@ struct command_args get_user_command()
         args.cmd = CLIENT_CMD_UNDEFINED;
     }
 
-    command_args_print(args);
-    printf("\n");
+    // command_args_print(args);
+    // printf("\n");
 
     return args;
 }
@@ -225,13 +226,55 @@ int TCP_client_send(struct TCP_client *TCP_client,
 
 int TCP_client_recv(struct TCP_client *TCP_client)
 {
-    int rc = recv_all(TCP_client->fd, &TCP_client->recv_packet, sizeof(TCP_client->recv_packet));
+    int rc = recv_all(TCP_client->fd,
+                      &TCP_client->recv_packet,
+                      sizeof(TCP_client->recv_packet));
     if (rc < 0)
         return -1;
     if (rc == 0)  // Connection ended.
         return 0;
     
     return rc;
+}
+
+void TCP_client_print_subscription_message(struct TCP_client *TCP_client)
+{
+    struct TCP_header TCP_hdr = *(struct TCP_header *)&TCP_client->recv_packet;
+    struct TCP_stoc_msg TCP_msg = *(struct TCP_stoc_msg *)TCP_hdr.msg;
+    struct UDP_msg UDP_msg = TCP_msg.content;
+
+    printf("%s:%hu - %s - ",
+           inet_ntoa(TCP_msg.src_ip),
+           TCP_msg.src_port,
+           UDP_msg.topic);
+
+    uint8_t sign;
+    switch (UDP_msg.data_type) {
+        case 0:
+            sign = *(uint8_t *)UDP_msg.content;
+            uint32_t data_int = ntohl(*(uint32_t *)(UDP_msg.content + 1));
+            sign ? printf("INT - -%d\n", data_int) :
+                   printf("INT - %d\n", data_int);
+            break;
+        case 1:
+            uint16_t data_short_real = ntohs(*(uint16_t *)UDP_msg.content);
+            printf("SHORT_REAL - %.2f\n", (float)data_short_real / 100);
+            break;
+        case 2:
+            sign = *(uint8_t *)UDP_msg.content;
+            uint32_t significand = ntohl(*(uint32_t *)(UDP_msg.content + 1));
+            uint8_t exponent = *(uint8_t *)(UDP_msg.content + 5);
+            float data_float = significand / pow(10, exponent);
+            sign ? printf("FLOAT - -%.*f\n", exponent, data_float) :
+                   printf("FLOAT - %.*f\n", exponent, data_float);
+            break;
+        case 3:
+            printf("STRING - %s\n", UDP_msg.content);
+            break;
+        default:
+            printf("UNKNOWN - %s\n", UDP_msg.content);
+            break;
+    }
 }
 
 
@@ -353,7 +396,8 @@ void run_client(struct TCP_client *TCP_client)
                     client_exit(poller, TCP_client);
                 }
 
-                // TODO: treat UDP subscription message
+                // Treat subscription message.
+                TCP_client_print_subscription_message(TCP_client);
             }
         }
     }

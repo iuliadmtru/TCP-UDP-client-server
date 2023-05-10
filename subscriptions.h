@@ -14,6 +14,7 @@ typedef struct subscription_node {
 
 typedef struct subscriptions_list {
     subscription_node *head;
+    struct subscription_node *current;
 } subscriptions_list;
 
 void subscription_node_print(subscription_node *subscription, int idx);
@@ -39,5 +40,8 @@ void subscriptions_remove_subscription(subscriptions_list *subscriptions,
 subscription_node *subscriptions_find(subscriptions_list *subscriptions,
                                       char *topic,
                                       char *subscriber_id);
+
+subscription_node *subscriptions_get_next(subscriptions_list *subscriptions,
+                                          char *topic);
 
 #endif  // _SUBSCRIPTIONS_H_

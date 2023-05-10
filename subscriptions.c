@@ -69,6 +69,7 @@ subscriptions_list *subscriptions_create()
 {
     subscriptions_list *subscriptions = malloc(sizeof(subscriptions_list));
     subscriptions->head = NULL;
+    subscriptions->current = subscriptions->head;
 
     return subscriptions;
 }
@@ -92,9 +93,9 @@ void subscriptions_add_subscription(subscriptions_list *subscriptions,
     if (subscriptions_list_is_empty(subscriptions)) {
         subscriptions->head = subscription;
 
-        printf("Print subscriptions list after add:\n");
-        subscriptions_print(subscriptions);
-        printf("\n");
+        // printf("Print subscriptions list after add:\n");
+        // subscriptions_print(subscriptions);
+        // printf("\n");
 
         return;
     }
@@ -103,9 +104,9 @@ void subscriptions_add_subscription(subscriptions_list *subscriptions,
     subscriptions->head->prev = subscription;
     subscriptions->head = subscription;
 
-    printf("Print subscriptions list after add:\n");
-    subscriptions_print(subscriptions);
-    printf("\n");
+    // printf("Print subscriptions list after add:\n");
+    // subscriptions_print(subscriptions);
+    // printf("\n");
 }
 
 int subscriptions_list_is_head(subscriptions_list *subscriptions,
@@ -159,6 +160,27 @@ subscription_node *subscriptions_find(subscriptions_list *subscriptions,
             strcmp(current->subscriber_id, subscriber_id) == 0)
             return current;
 
+        current = current->next;
+    }
+
+    return NULL;
+}
+
+subscription_node *subscriptions_get_next(subscriptions_list *subscriptions,
+                                          char *topic)
+{
+    if (subscriptions_list_is_empty(subscriptions)) {
+        fprintf(stderr,
+                "Cannot get subscription from empty subscriptions list\n");
+        return NULL;
+    }
+
+    subscription_node *current = subscriptions->current;
+    while (current) {
+        if (strcmp(current->topic, topic) == 0) {
+            subscriptions->current = current->next;
+            return current;
+        }
         current = current->next;
     }
 

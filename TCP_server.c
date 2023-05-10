@@ -110,47 +110,6 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server)
     return cli_fd;
 }
 
-int TCP_server_recv(struct TCP_server *TCP_server, int fd)
-{
-    printf("Receive packet on file descriptor %d...\n", fd);
-
-    // Receive packet.
-    struct packet recv_packet;
-    int rc = recv_all(fd,
-                      &recv_packet,
-                      sizeof(recv_packet));
-
-    printf("Received %d bytes\n", rc);
-
-    if (rc < 0)
-        return -1;
-    if (rc == 0)  // Connection ended.
-        return 0;
-
-    // Check if `recv_all` finished reading the message length.
-    TCP_server->bytes_read += rc;
-
-    printf("bytes_read: %d\n", TCP_server->bytes_read);
-
-    if (TCP_server->bytes_read < 2)
-        return -2;
-
-    // Check if `recv_all` finished reading the entire message.
-    struct TCP_header *TCP_hdr = (struct TCP_header *)recv_packet.msg;
-    int msg_len_total = TCP_hdr->msg_len + sizeof(TCP_hdr->msg_len);
-    if (TCP_server->bytes_read < msg_len_total)
-        return -2;
-
-    // Copy the packet inside the TCP server as a TCP header.
-    memcpy(&TCP_server->recv_msg, TCP_hdr->msg, msg_len_total);
-
-    printf("TCP_server after recv:\n");
-    TCP_server_print(TCP_server);
-    printf("\n");
-
-    return 1;
-}
-
 int TCP_server_recv_all(struct TCP_server *TCP_server, int fd)
 {
     struct packet recv_packet;
@@ -221,18 +180,18 @@ int TCP_server_recv_all1(struct TCP_server *TCP_server, int fd)
     return 1;
 }
 
-int TCP_server_recv_all2(struct TCP_server *TCP_server, int fd)
+int TCP_server_send(struct TCP_server *TCP_server,
+                    int fd,
+                    struct TCP_header TCP_msg)
 {
-    int rc = -2;
-    while (rc == -2) {
-        rc = TCP_server_recv(TCP_server, fd);
-        if (rc == 0 || rc == -1)
-            break;
-    }
+    struct packet sent_packet;
+    memset(&sent_packet, 0, sizeof(sent_packet));
 
-    // Reset `bytes_read`.
-    if (rc > 0)
-        TCP_server->bytes_read = 0;
+    memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
+    int rc = send_all(fd, &sent_packet, sizeof(sent_packet));
+
+    printf("Sent message:\n");
+    TCP_header_print(*(struct TCP_header *)sent_packet.msg, TCP_STOC_MSG);
 
     return rc;
 }
@@ -354,4 +313,30 @@ void TCP_server_unsubscribe(struct TCP_server *TCP_server, int fd)
     }
 
     subscriptions_remove_subscription(TCP_server->subscriptions, subscription);
+}
+
+int TCP_server_send_to_subscribers(struct TCP_server *TCP_server,
+                                   struct TCP_header TCP_msg)
+{
+    struct TCP_stoc_msg TCP_stoc_msg = *(struct TCP_stoc_msg *)TCP_msg.msg;
+    struct UDP_msg UDP_msg = TCP_stoc_msg.content;
+
+    int rc;
+    while (1) {
+        subscription_node *sub =
+            subscriptions_get_next(TCP_server->subscriptions, UDP_msg.topic);
+        if (!sub)
+            break;
+
+        // Send the message to the subscriber. (Or store it!)
+        client_node *subscriber =
+            clients_list_find_by_id(TCP_server->connected_clients,
+                                    sub->subscriber_id);
+        rc = TCP_server_send(TCP_server, subscriber->fd, TCP_msg);
+
+        if (rc < 0)
+            return -1;
+    }
+
+    return rc;
 }
