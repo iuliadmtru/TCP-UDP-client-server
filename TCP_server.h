@@ -5,6 +5,7 @@
 
 #include "packets.h"
 #include "clients.h"
+#include "subscriptions.h"
 
 struct TCP_server {
     int fd;
@@ -13,6 +14,7 @@ struct TCP_server {
     struct TCP_ctos_msg recv_msg;
     int bytes_read;
     clients_list *connected_clients;
+    subscriptions_list *subscriptions;
 };
 
 void TCP_server_print(struct TCP_server *TCP_server);
@@ -32,5 +34,9 @@ void TCP_server_close_connection(struct TCP_server *TCP_server, int fd);
 int TCP_server_is_new_connection(struct TCP_server *TCP_server, int fd);
 
 int TCP_server_update_client(struct TCP_server *TCP_server, int fd);
+
+void TCP_server_subscribe(struct TCP_server *TCP_server, int fd);
+
+void TCP_server_unsubscribe(struct TCP_server *TCP_server, int fd);
 
 #endif  // _TCP_SERV_H_

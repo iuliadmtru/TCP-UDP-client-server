@@ -33,7 +33,7 @@ struct TCP_header {
  */
 struct TCP_ctos_msg {
     uint8_t msg_type;  // new || subscribe || unsubscribe
-    char payload[CTOS_MAXLEN];  // id || topic
+    char payload[CTOS_MAXLEN];  // id || topic + sf
 } __attribute__((packed));
 
 /*

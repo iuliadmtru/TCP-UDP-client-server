@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#include "packets.h"
+
 /*
  * Error-checking macro.
  */
@@ -27,5 +29,15 @@ enum error_ret_value {FAIL_SOCKET = -1,
 int recv_all(int sockfd, void *buffer, size_t len);
 
 int send_all(int sockfd, void *buffer, size_t len);
+
+enum msg_type {TCP_CTOS_MSG, TCP_STOC_MSG};
+
+void TCP_header_print(struct TCP_header TCP_hdr, int msg_type);
+
+void TCP_ctos_msg_print(struct TCP_ctos_msg TCP_msg);
+
+void TCP_stoc_msg_print(struct TCP_stoc_msg TCP_msg);
+
+void UDP_msg_print(struct UDP_msg UDP_msg);
 
 #endif  // _UTIL_H_

@@ -1,5 +1,5 @@
 CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
-SERV_SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c util.c
+SERV_SOURCES = server.c poller.c UDP_server.c TCP_server.c clients.c util.c subscriptions.c
 CLI_SOURCES = TCP_client.c poller.c util.c
 LIBS =
 

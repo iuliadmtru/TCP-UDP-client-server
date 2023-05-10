@@ -132,6 +132,8 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
 
         // Iterate through file descriptors where an event happened.
         while (1) {
+            printf("\nEntered server loop...\n");
+
             int fd = poller_next_fd_with_POLLIN(poller);
             if (fd == -1) {
                 break;
@@ -171,6 +173,8 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                 }
 
                 if (TCP_server_is_new_connection(TCP_server, fd)) {
+                    printf("Treat new connection\n");
+
                     rc = TCP_server_update_client(TCP_server, fd);
                     if (rc == -1)  // Client is already connected.
                         poller_remove_fd(poller, fd);
@@ -179,7 +183,18 @@ void run_server(struct UDP_server *UDP_server, struct TCP_server *TCP_server)
                                                        fd,
                                                        CONNECTED);
                 } else {  // Received subscribe/unsubscribe message.
+                    switch (TCP_server->recv_msg.msg_type) {
+                        case TCP_MSG_SUBSCRIBE:
+                            printf("Treat subscribe message\n");
 
+                            TCP_server_subscribe(TCP_server, fd);
+                            break;
+                        case TCP_MSG_UNSUBSCRIBE:
+                            printf("Treat unsubscribe message\n");
+
+                            TCP_server_unsubscribe(TCP_server, fd);
+                            break;
+                    }
                 }
             }
         }

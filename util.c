@@ -46,3 +46,51 @@ int send_all(int sockfd, void *buffer, size_t len)
 
     return send(sockfd, buffer, len, 0);
 }
+
+void TCP_header_print(struct TCP_header TCP_hdr, int msg_type)
+{
+    printf("Print TCP header:\n");
+    printf("\tmsg_len: %hu\n", TCP_hdr.msg_len);
+    msg_type == TCP_CTOS_MSG ? TCP_ctos_msg_print(*(struct TCP_ctos_msg *)TCP_hdr.msg)
+                             : TCP_stoc_msg_print(*(struct TCP_stoc_msg *)TCP_hdr.msg);
+    printf("\n");
+}
+
+void TCP_ctos_msg_print(struct TCP_ctos_msg TCP_msg)
+{
+    printf("Print TCP CTOS message:\n");
+    switch (TCP_msg.msg_type) {
+        case TCP_MSG_NEW:
+            printf("\tmsg_type: TCP_MSG_NEW\n");
+            break;
+        case TCP_MSG_SUBSCRIBE:
+            printf("\tmsg_type: TCP_MSG_SUBSCRIBE\n");
+            break;
+        case TCP_MSG_UNSUBSCRIBE:
+            printf("\tmsg_type: TCP_MSG_UNSUBSCRIBE\n");
+            break;
+    }
+    printf("\tpayload: %s\n", TCP_msg.payload);
+    printf("\n");
+}
+
+#include <arpa/inet.h>
+
+void TCP_stoc_msg_print(struct TCP_stoc_msg TCP_msg)
+{
+    printf("Print TCP STOC message:\n");
+    printf("\tsrc_ip: %s\n", inet_ntoa(TCP_msg.src_ip));
+    printf("\tsrc_port: %hu\n", TCP_msg.src_port);
+    printf("Print content:\n");
+    UDP_msg_print(TCP_msg.content);
+    printf("\n");
+}
+
+void UDP_msg_print(struct UDP_msg UDP_msg)
+{
+    printf("Print UDP message:\n");
+    printf("\ttopic: %s\n", UDP_msg.topic);
+    printf("\tdata_type: %hhu\n", UDP_msg.data_type);
+    printf("\tcontent: %s\n", UDP_msg.content);
+    printf("\n");
+}

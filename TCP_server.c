@@ -9,6 +9,7 @@
 #include "packets.h"
 #include "util.h"
 #include "clients.h"
+#include "subscriptions.h"
 
 void TCP_server_print(struct TCP_server *TCP_server)
 {
@@ -69,6 +70,7 @@ struct TCP_server *TCP_server_create(int fd)
     TCP_server->fd = fd;
     TCP_server->serv_addr_len = sizeof(struct sockaddr_in);
     TCP_server->connected_clients = clients_list_create();
+    TCP_server->subscriptions = subscriptions_create();
     TCP_server->bytes_read = 0;
 
     return TCP_server;
@@ -78,6 +80,7 @@ void TCP_server_destroy(struct TCP_server *TCP_server)
 {
     close(TCP_server->fd);
     clients_list_destroy(TCP_server->connected_clients);
+    subscriptions_destroy(TCP_server->subscriptions);
     free(TCP_server);
 }
 
@@ -99,9 +102,9 @@ int TCP_server_accept_connection(struct TCP_server *TCP_server)
                                                  ntohs(cli_addr.sin_port));
     clients_list_add_client(TCP_server->connected_clients, new_client);
 
-    printf("TCP_server after accepting connection:\n");
-    TCP_server_print(TCP_server);
-    printf("\n");
+    // printf("TCP_server after accepting connection:\n");
+    // TCP_server_print(TCP_server);
+    // printf("\n");
 
     return cli_fd;
 }
@@ -132,9 +135,9 @@ int TCP_server_recv(struct TCP_server *TCP_server, int fd)
     // Copy the packet inside the TCP server as a TCP header.
     memcpy(&TCP_server->recv_msg, TCP_hdr->msg, msg_len_total);
 
-    printf("TCP_server after recv:\n");
-    TCP_server_print(TCP_server);
-    printf("\n");
+    // printf("TCP_server after recv:\n");
+    // TCP_server_print(TCP_server);
+    // printf("\n");
 
     return 1;
 }
@@ -207,4 +210,60 @@ int TCP_server_update_client(struct TCP_server *TCP_server, int fd)
                                      id);
 
     return 0;
+}
+
+struct subscribe_args {
+    char topic[TOPIC_LEN];
+    uint8_t store_and_forward;
+};
+
+struct subscribe_args TCP_server_get_sub_args(struct TCP_server *TCP_server)
+{
+    struct subscribe_args args;
+    sscanf(TCP_server->recv_msg.payload,
+           "%s %hhu",
+           args.topic,
+           &args.store_and_forward);
+
+    return args;
+}
+
+void TCP_server_subscribe(struct TCP_server *TCP_server, int fd)
+{
+    // Find subscriber.
+    client_node *subscriber =
+        clients_list_find_by_fd(TCP_server->connected_clients, fd);
+    if (!subscriber) {
+        fprintf(stderr, "Cannot subscribe - client not found\n");
+        return;
+    }
+
+    // Create new subscription.
+    struct subscribe_args args = TCP_server_get_sub_args(TCP_server);
+    subscription_node *sub = subscription_node_create(args.topic,
+                                                      subscriber->id,
+                                                      args.store_and_forward);
+    subscriptions_add_subscription(TCP_server->subscriptions, sub);
+}
+
+void TCP_server_unsubscribe(struct TCP_server *TCP_server, int fd)
+{
+    // Find subscriber.
+    client_node *unsubscriber =
+        clients_list_find_by_fd(TCP_server->connected_clients, fd);
+    if (!unsubscriber) {
+        fprintf(stderr, "Cannot unsubscribe - client not connected\n");
+        return;
+    }
+
+    subscription_node *subscription =
+        subscriptions_find(TCP_server->subscriptions,
+                           TCP_server->recv_msg.payload,
+                           unsubscriber->id);
+    if (!subscription) {
+        fprintf(stderr, "Cannot unsubscribe - client not subscribed\n");
+        return;
+    }
+
+    subscriptions_remove_subscription(TCP_server->subscriptions, subscription);
 }

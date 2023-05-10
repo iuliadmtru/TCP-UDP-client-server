@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "poller.h"
 #include "packets.h"
@@ -31,6 +32,31 @@ struct command_args {
     char topic[TOPIC_LEN];
     uint8_t store_and_forward;
 };
+
+void command_args_print(struct command_args args)
+{
+    printf("Print command arguments:\n");
+    switch (args.cmd) {
+        case CLIENT_CMD_EXIT:
+            printf("cmd: CLIENT_CMD_EXIT\n");
+            printf("topic: %s\n", args.topic);
+            printf("store_and_forward: %hhu\n", args.store_and_forward);
+            break;
+        case CLIENT_CMD_SUBSCRIBE:
+            printf("cmd: CLIENT_CMD_SUBSCRIBE\n");
+            printf("topic: %s\n", args.topic);
+            printf("store_and_forward: %hhu\n", args.store_and_forward);
+            break;
+        case CLIENT_CMD_UNSUBSCRIBE:
+            printf("cmd: CLIENT_CMD_UNSUBSCRIBE\n");
+            printf("topic: %s\n", args.topic);
+            printf("store_and_forward: %hhu\n", args.store_and_forward);
+            break;
+        case CLIENT_CMD_UNDEFINED:
+            printf("cmd: CLIENT_CMD_UNDEFINED\n");
+            break;
+    }
+}
 
 /*
  * Check that the argument number is correct.
@@ -64,6 +90,16 @@ struct args get_args(char *argv[])
     return args;
 }
 
+int vread(char *fmt, ...)
+{
+   int rc;
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   rc = vscanf(fmt, arg_ptr);
+   va_end(arg_ptr);
+   return(rc);
+}
+
 /*
  * Parse user command: CLIENT_CMD_EXIT, CLIENT_CMD_SUBSCRIBE,
  * CLIENT_CMD_UNSUBSCRIBE, CLIENT_CMD_UNDEFINED.
@@ -73,26 +109,32 @@ struct command_args get_user_command()
     struct command_args args;
 
     char cmd[CMD_MAXLEN];
-    scanf("%s", cmd);
+    int rc = scanf("%s", cmd);
+
     if (strcmp(cmd, "exit") == 0) {
         args.cmd = CLIENT_CMD_EXIT;
     } else if (strcmp(cmd, "subscribe") == 0) {
-        char topic[TOPIC_LEN];
-        uint8_t store_and_forward;
-        scanf("%s %hhu", topic, &store_and_forward);
-
-        strcpy(args.topic, topic);
-        args.store_and_forward = store_and_forward;
+        rc = vread("%s %hhu", args.topic, &args.store_and_forward);
+        if (rc != 2) {
+            fprintf(stderr, "Not all arguments were initialized\n");
+            args.cmd = CLIENT_CMD_UNDEFINED;
+            return args;
+        }
         args.cmd = CLIENT_CMD_SUBSCRIBE;
     } else if (strcmp(cmd, "unsubscribe") == 0) {
-        char topic[TOPIC_LEN];
-        scanf("%s", topic);
-
-        strcpy(args.topic, topic);
+        rc = vread("%s", args.topic);
+        if (rc != 1) {
+            fprintf(stderr, "Not all arguments were initialized\n");
+            args.cmd = CLIENT_CMD_UNDEFINED;
+            return args;
+        }
         args.cmd = CLIENT_CMD_UNSUBSCRIBE;
     } else {
         args.cmd = CLIENT_CMD_UNDEFINED;
     }
+
+    command_args_print(args);
+    printf("\n");
 
     return args;
 }
@@ -170,7 +212,10 @@ int TCP_client_send(struct TCP_client *TCP_client,
 {
     struct packet sent_packet;
     memcpy(sent_packet.msg, (char *)&TCP_msg, TCP_msg.msg_len);
-    int rc = send_all(TCP_client->fd, &sent_packet, sizeof(sent_packet));
+    int rc = send_all(TCP_client->fd, &sent_packet, TCP_msg.msg_len);
+
+    printf("Sent message:\n");
+    TCP_header_print(*(struct TCP_header *)sent_packet.msg, TCP_CTOS_MSG);
 
     return rc;
 }
@@ -203,9 +248,14 @@ struct TCP_header client_compose_msg(uint8_t type, char *payload)
     TCP_msg.msg_type = type;
     strcpy(TCP_msg.payload, payload);
 
+    printf("payload: %s\n", payload);
+
     struct TCP_header TCP_hdr;
     TCP_hdr.msg_len = sizeof(struct TCP_ctos_msg);
     memcpy(TCP_hdr.msg, (char *)&TCP_msg, TCP_hdr.msg_len);
+
+    printf("Composed message:\n");
+    TCP_header_print(TCP_hdr, TCP_CTOS_MSG);
 
     return TCP_hdr;
 }
@@ -238,9 +288,10 @@ void run_client(struct TCP_client *TCP_client)
                     case CLIENT_CMD_SUBSCRIBE:
                         // Construct payload as the string "<TOPIC> <SF>".
                         char payload[CTOS_MAXLEN];
-                        strncat(payload, args.topic, TOPIC_LEN);
-                        args.store_and_forward ? strncat(payload, " 1", 3) :
-                                                 strncat(payload, " 0", 3);
+                        memset(payload, 0, CTOS_MAXLEN);
+                        strcat(payload, args.topic);
+                        args.store_and_forward ? strcat(payload, " 1") :
+                                                 strcat(payload, " 0");
 
                         // Compose and send subscribe message.
                         struct TCP_header subscribe_msg =
@@ -252,7 +303,7 @@ void run_client(struct TCP_client *TCP_client)
                     case CLIENT_CMD_UNSUBSCRIBE:
                         // Compose and send unsubscribe message.
                         struct TCP_header unsubscribe_msg =
-                            client_compose_msg(TCP_MSG_SUBSCRIBE, args.topic);
+                            client_compose_msg(TCP_MSG_UNSUBSCRIBE, args.topic);
                         rc = TCP_client_send(TCP_client, unsubscribe_msg);
                         DIE(rc < 0, "TCP_client_send failed");
 

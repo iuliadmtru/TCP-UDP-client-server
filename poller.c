@@ -46,9 +46,9 @@ void poller_add_fd(struct poller *poller, int fd)
     poller->pollfds[idx].events = POLLIN;
     poller->num_pollfds++;
 
-    printf("Poller after add:\n");
-    poller_print(poller);
-    printf("\n");
+    // printf("Poller after add:\n");
+    // poller_print(poller);
+    // printf("\n");
 }
 
 int poller_find_fd_idx(struct poller *poller, int fd)
@@ -92,8 +92,9 @@ int poller_next_fd_with_POLLIN(struct poller *poller)
         return -1;
     }
 
-    printf("\nPoller after finding event at file descriptor %d:\n", poller->pollfds[poller->idx_iterator].fd);
-    poller_print(poller);
+    // printf("\nPoller after finding event at file descriptor %d:\n", poller->pollfds[poller->idx_iterator].fd);
+    // poller_print(poller);
+    // printf("\n");
     
     // Move index to the next entry and return the file descriptor where the
     // event happened.
